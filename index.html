@@ -1,90 +1,631 @@
-// Ganti alamat ini dengan domain backend Anda di Vercel / Render / GitHub Pages
-const API_URL = "http://localhost:3000/api/jurnal"; 
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jurnal Mengajar Guru - SMAN 2 Karanganyar</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .floating-sidebar {
+            width: 70px;
+            transition: all 0.3s ease-in-out;
+        }
+        .floating-sidebar:hover, .floating-sidebar.pinned {
+            width: 250px;
+        }
+        .floating-sidebar .menu-text {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+            white-space: nowrap;
+        }
+        .floating-sidebar:hover .menu-text, .floating-sidebar.pinned .menu-text {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
 
-// 1. Simpan Jurnal ke Neon Database via API
-async function handleFormSubmit(e) {
-    e.preventDefault();
+    <!-- Header Top -->
+    <header class="bg-blue-900 text-white shadow-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3 pl-16 md:pl-20">
+            <i class="fa-solid fa-school text-2xl text-yellow-400"></i>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">SMAN 2 KARANGANYAR</h1>
+                <p class="text-xs text-blue-200">Aplikasi Jurnal KBM & Absensi Presensi Guru</p>
+            </div>
+        </div>
+        <div class="text-right text-xs md:text-sm hidden sm:block">
+            <div id="clockDisplay" class="font-bold text-yellow-300"></div>
+            <div id="dateDisplay" class="text-slate-200"></div>
+        </div>
+    </header>
 
-    if (selectedJamList.length === 0) {
-        alert("Silakan pilih Jam Ke (1-10) terlebih dahulu.");
-        return;
-    }
+    <!-- FLOATING SIDEBAR LEFT -->
+    <aside id="sidebar" class="floating-sidebar fixed left-2 top-20 bottom-6 bg-white shadow-2xl rounded-2xl z-50 border border-slate-200 flex flex-col justify-between overflow-hidden">
+        <div>
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-book-bookmark"></i>
+                    </div>
+                    <span class="menu-text font-bold text-slate-800 text-sm">NAVIGASI</span>
+                </div>
+                <button id="pinBtn" title="Sematkan / Lock Sidebar" class="menu-text text-slate-400 hover:text-blue-600 focus:outline-none">
+                    <i class="fa-solid fa-thumbtack text-xs"></i>
+                </button>
+            </div>
 
-    const payload = {
-        nama_guru: document.getElementById('namaGuru').value,
-        mapel: document.getElementById('mapel').value,
-        kelas: document.getElementById('pilihanKelas').value,
-        jam_ke: selectedJamList.join(', '),
-        materi: document.getElementById('materi').value,
-        absensi: getAbsensiData(),
-        foto_url: "", // Bisa diintegrasikan dengan Cloudinary/ImgBB jika ada upload gambar
-        lokasi_gps: isLocationValid ? "Dalam Radius" : "Bypass GPS",
-        latitude: userLat,
-        longitude: userLng
-    };
+            <nav class="p-2 space-y-1">
+                <button onclick="switchTab('jurnalTab')" id="nav-jurnalTab" class="nav-btn w-full flex items-center gap-4 px-3 py-3 rounded-xl text-blue-600 bg-blue-50 font-medium transition">
+                    <i class="fa-solid fa-pen-to-square text-lg w-6 text-center"></i>
+                    <span class="menu-text text-sm">Jurnal KBM</span>
+                </button>
+                <button onclick="switchTab('tugasLuarTab')" id="nav-tugasLuarTab" class="nav-btn w-full flex items-center gap-4 px-3 py-3 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition">
+                    <i class="fa-solid fa-briefcase text-lg w-6 text-center"></i>
+                    <span class="menu-text text-sm">Tugas Luar</span>
+                </button>
+                <button onclick="switchTab('rekapTab')" id="nav-rekapTab" class="nav-btn w-full flex items-center gap-4 px-3 py-3 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition">
+                    <i class="fa-solid fa-list-check text-lg w-6 text-center"></i>
+                    <span class="menu-text text-sm">Rekap Jurnal</span>
+                </button>
+            </nav>
+        </div>
 
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+        <div class="p-3 border-t border-slate-100 bg-slate-50">
+            <div class="flex items-center gap-3">
+                <div id="sidebarGpsIcon" class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-location-crosshairs animate-spin"></i>
+                </div>
+                <div class="menu-text text-xs">
+                    <p class="font-bold text-slate-700">Status GPS</p>
+                    <p id="sidebarGpsStatus" class="text-amber-600 font-medium">Mengecek...</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="pl-24 pr-4 py-6 max-w-7xl mx-auto w-full flex-grow">
+
+        <!-- TAB 1: JURNAL MENGAJAR -->
+        <section id="jurnalTab" class="tab-content space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 md:p-6">
+                <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-file-pen text-blue-600"></i> Form Jurnal Mengajar Harian
+                </h2>
+
+                <form id="formJurnal" class="space-y-6" onsubmit="handleFormSubmit(event)">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Guru</label>
+                            <input type="text" id="namaGuru" required placeholder="Nama Lengkap Guru" value="Drs. Budi Santoso, M.Pd." class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Mata Pelajaran</label>
+                            <input type="text" id="mapel" required placeholder="Contoh: Matematika" value="Matematika" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pilihan Kelas</label>
+                            <select id="pilihanKelas" onchange="loadSiswaByKelas()" required class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-semibold text-blue-900 bg-blue-50">
+                                <option value="">-- Pilih Kelas --</option>
+                                <optgroup label="KELAS X">
+                                    <option value="X 1">Kelas X 1</option><option value="X 2">Kelas X 2</option>
+                                    <option value="X 3">Kelas X 3</option><option value="X 4">Kelas X 4</option>
+                                    <option value="X 5">Kelas X 5</option><option value="X 6">Kelas X 6</option>
+                                    <option value="X 7">Kelas X 7</option><option value="X 8">Kelas X 8</option>
+                                    <option value="X 9">Kelas X 9</option><option value="X 10">Kelas X 10</option>
+                                </optgroup>
+                                <optgroup label="KELAS XI">
+                                    <option value="XI 1">Kelas XI 1</option><option value="XI 2">Kelas XI 2</option>
+                                    <option value="XI 3">Kelas XI 3</option><option value="XI 4">Kelas XI 4</option>
+                                    <option value="XI 5">Kelas XI 5</option><option value="XI 6">Kelas XI 6</option>
+                                    <option value="XI 7">Kelas XI 7</option><option value="XI 8">Kelas XI 8</option>
+                                    <option value="XI 9">Kelas XI 9</option><option value="XI 10">Kelas XI 10</option>
+                                </optgroup>
+                                <optgroup label="KELAS XII">
+                                    <option value="XII 1">Kelas XII 1</option><option value="XII 2">Kelas XII 2</option>
+                                    <option value="XII 3">Kelas XII 3</option><option value="XII 4">Kelas XII 4</option>
+                                    <option value="XII 5">Kelas XII 5</option><option value="XII 6">Kelas XII 6</option>
+                                    <option value="XII 7">Kelas XII 7</option><option value="XII 8">Kelas XII 8</option>
+                                    <option value="XII 9">Kelas XII 9</option><option value="XII 10">Kelas XII 10</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">Jam Ke (Klik Kotak):</label>
+                        <div class="grid grid-cols-5 sm:grid-cols-10 gap-2" id="jamGrid"></div>
+                        <input type="hidden" id="selectedJam" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Materi / Modul Pembelajaran</label>
+                        <textarea id="materi" rows="3" required placeholder="Tulis uraian materi KBM hari ini..." class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                    </div>
+
+                    <div class="border border-slate-200 rounded-xl p-4 bg-slate-50">
+                        <div class="flex justify-between items-center mb-3">
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-800">Daftar Absensi Siswa Tidak Hadir</h3>
+                                <p class="text-xs text-slate-500">Pilih status bagi siswa (S: Sakit, I: Izin, A: Alpha)</p>
+                            </div>
+                            <span id="presensiCount" class="text-xs bg-blue-100 text-blue-800 font-semibold px-2.5 py-1 rounded-full">0 Siswa Tidak Hadir</span>
+                        </div>
+                        <div id="siswaListContainer" class="max-h-60 overflow-y-auto pr-2 divide-y divide-slate-200">
+                            <p class="text-xs text-slate-400 italic py-4 text-center">Silakan pilih Kelas terlebih dahulu.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border border-slate-200 rounded-xl p-4 bg-white">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">Upload Foto KBM</label>
+                            <input type="file" id="fotoKbm" accept="image/*" capture="environment" onchange="previewImage(event)" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-2">
+                            <div id="imagePreviewContainer" class="hidden">
+                                <img id="imagePreview" src="#" alt="Preview Foto" class="h-32 rounded-lg object-cover border border-slate-300">
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-slate-700"><i class="fa-solid fa-location-dot text-red-500"></i> Validasi Geolokasi</span>
+                                    <button type="button" onclick="getGeoLocation()" class="text-xs text-blue-600 hover:underline"><i class="fa-solid fa-arrows-rotate"></i> Refresh Lokasi</button>
+                                </div>
+                                <div class="text-xs space-y-1">
+                                    <p>Koordinat: <span id="geoCoords" class="font-mono text-slate-600">Checking...</span></p>
+                                    <p>Jarak Ke SMAN 2 Kra: <span id="geoDistance" class="font-bold text-slate-800">-</span></p>
+                                </div>
+                            </div>
+                            <div id="geoBadge" class="mt-3 p-2 rounded-lg text-xs font-semibold text-center bg-amber-100 text-amber-800">
+                                <i class="fa-solid fa-spinner animate-spin"></i> Mendapatkan koordinat GPS...
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 pt-2">
+                        <button type="submit" id="btnSimpan" disabled class="flex-1 bg-slate-300 text-slate-500 cursor-not-allowed font-bold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2 shadow">
+                            <i class="fa-solid fa-floppy-disk"></i> SIMPAN JURNAL
+                        </button>
+                        <label class="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
+                            <input type="checkbox" id="bypassGps" onchange="toggleBypassGps()" class="rounded text-blue-600">
+                            Bypass Lokasi (Emergency)
+                        </label>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- TAB 2: TUGAS LUAR -->
+        <section id="tugasLuarTab" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 md:p-6">
+                <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-briefcase text-amber-600"></i> Form Pelaporan Tugas Luar / Dinas
+                </h2>
+                <form id="formTugasLuar" onsubmit="handleTugasLuarSubmit(event)" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Guru</label>
+                            <input type="text" id="tlNama" required class="w-full px-3 py-2 border rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Jenis Tugas Dinas</label>
+                            <input type="text" id="tlJenis" placeholder="Contoh: Diklat Guru" required class="w-full px-3 py-2 border rounded-xl text-sm">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kelas Ditinggalkan</label>
+                            <input type="text" id="tlKelas" placeholder="Contoh: X 1, XI 3" required class="w-full px-3 py-2 border rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Guru Pendamping / Inval</label>
+                            <input type="text" id="tlInval" placeholder="Nama guru pengganti" class="w-full px-3 py-2 border rounded-xl text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tugas Untuk Siswa</label>
+                        <textarea id="tlDeskripsi" rows="3" required placeholder="Tuliskan tugas siswa..." class="w-full p-3 border rounded-xl text-sm"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl transition shadow">
+                        <i class="fa-solid fa-paper-plane mr-2"></i> KIRIM LAPORAN TUGAS LUAR
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- TAB 3: REKAP DATA -->
+        <section id="rekapTab" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 md:p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-green-600"></i> Rekapitulasi Jurnal Mengajar
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center gap-1">
+                            <i class="fa-solid fa-file-excel"></i> Export CSV
+                        </button>
+                        <button onclick="window.print()" class="bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center gap-1">
+                            <i class="fa-solid fa-print"></i> Cetak
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-600 border-collapse">
+                        <thead class="bg-slate-100 text-slate-700 uppercase font-semibold">
+                            <tr>
+                                <th class="p-3 border-b">Waktu</th>
+                                <th class="p-3 border-b">Kelas</th>
+                                <th class="p-3 border-b">Jam Ke</th>
+                                <th class="p-3 border-b">Mata Pelajaran</th>
+                                <th class="p-3 border-b">Materi Hari Ini</th>
+                                <th class="p-3 border-b">Ket. Siswa</th>
+                                <th class="p-3 border-b">Lokasi GPS</th>
+                                <th class="p-3 border-b text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rekapTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- KODE JAVASCRIPT APLIKASI DIBUNGKUS DENGAN TAG SCRIPT TERPISAH -->
+    <script>
+        const API_URL = "/api/jurnal"; // URL ke backend Vercel / Render
+
+        const SCHOOL_LAT = -7.5958; 
+        const SCHOOL_LNG = 110.9525;
+        const MAX_RADIUS_METERS = 300;
+
+        let userLat = null;
+        let userLng = null;
+        let isLocationValid = false;
+        let selectedJamList = [];
+
+        const studentDatabase = {
+            "X 1": ["Aditya Pratama", "Ahmad Fauzi", "Alya Nur", "Bagus Setiawan", "Citra Dewi", "Dian Sastro", "Eko Prasetyo", "Fahri Hamzah"],
+            "X 2": ["Anisa Rahma", "Bima Sakti", "Cahyo Utomo", "Dina Pertiwi", "Erlangga", "Fajar Sadboy", "Gita Gutawa", "Hendra Kurnia"],
+            "XI 1": ["Irfan Bachdim", "Joko Widodo", "Kiki Amalia", "Lesti Kejora", "Muhammad Rizky", "Nabila Syakieb", "Oki Setiana"],
+            "XII 1": ["Putri Marino", "Qory Sandioriva", "Raffi Ahmad", "Siti Badriah", "Taufik Hidayat", "Umar Ismail", "Vina Panduwinata"]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initClock();
+            initJamGrid();
+            getGeoLocation();
+            initSidebarPin();
+            renderRekapTable();
         });
 
-        if (response.ok) {
-            alert("Jurnal Mengajar Berhasil Disimpan ke Database Neon!");
-            resetForm();
-            renderRekapTable();
-            switchTab('rekapTab');
-        } else {
-            alert("Gagal menyimpan data ke database.");
-        }
-    } catch (error) {
-        console.error("Error:", error);
-        alert("Terjadi kesalahan koneksi ke database.");
-    }
-}
-
-// 2. Load Data Rekap dari Neon Database
-async function renderRekapTable() {
-    const tbody = document.getElementById('rekapTableBody');
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400">Memuat data dari Neon DB...</td></tr>`;
-
-    try {
-        const res = await fetch(API_URL);
-        const data = await res.json();
-
-        if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 italic">Belum ada data jurnal di database.</td></tr>`;
-            return;
+        function initClock() {
+            function update() {
+                const now = new Date();
+                document.getElementById('clockDisplay').innerText = now.toLocaleTimeString('id-ID') + " WIB";
+                document.getElementById('dateDisplay').innerText = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            }
+            update();
+            setInterval(update, 1000);
         }
 
-        tbody.innerHTML = data.map(item => `
-            <tr class="hover:bg-slate-50 border-b border-slate-100">
-                <td class="p-3 font-medium text-slate-800">${new Date(item.waktu).toLocaleString('id-ID')}</td>
-                <td class="p-3 font-bold text-blue-900">${item.kelas}</td>
-                <td class="p-3"><span class="bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded">Jam ${item.jam_ke}</span></td>
-                <td class="p-3">${item.mapel}</td>
-                <td class="p-3 max-w-xs truncate">${item.materi}</td>
-                <td class="p-3"><span class="text-amber-700 font-medium">${item.absensi}</span></td>
-                <td class="p-3"><span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-medium">${item.lokasi_gps}</span></td>
-                <td class="p-3 text-center">
-                    <button onclick="deleteJurnal(${item.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
-                </td>
-            </tr>
-        `).join('');
-    } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500">Gagal terhubung ke Database Neon.</td></tr>`;
-    }
-}
-
-// 3. Hapus Data dari Neon Database
-async function deleteJurnal(id) {
-    if (confirm("Hapus jurnal ini dari database Neon?")) {
-        try {
-            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-            renderRekapTable();
-        } catch (err) {
-            alert("Gagal menghapus data.");
+        function initJamGrid() {
+            const container = document.getElementById('jamGrid');
+            container.innerHTML = '';
+            for (let i = 1; i <= 10; i++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.innerText = i;
+                btn.className = `jam-btn border border-slate-300 rounded-lg py-2 font-bold text-slate-700 hover:bg-blue-100 transition`;
+                btn.onclick = () => toggleSelectJam(i, btn);
+                container.appendChild(btn);
+            }
         }
-    }
-}
+
+        function toggleSelectJam(jam, btnElement) {
+            if (selectedJamList.includes(jam)) {
+                selectedJamList = selectedJamList.filter(j => j !== jam);
+                btnElement.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                btnElement.classList.add('text-slate-700');
+            } else {
+                selectedJamList.push(jam);
+                selectedJamList.sort((a, b) => a - b);
+                btnElement.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+                btnElement.classList.remove('text-slate-700');
+            }
+            document.getElementById('selectedJam').value = selectedJamList.join(',');
+        }
+
+        function initSidebarPin() {
+            const sidebar = document.getElementById('sidebar');
+            const pinBtn = document.getElementById('pinBtn');
+            pinBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('pinned');
+                pinBtn.classList.toggle('text-blue-600');
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-blue-600', 'bg-blue-50');
+                btn.classList.add('text-slate-600');
+            });
+            const activeNav = document.getElementById('nav-' + tabId);
+            activeNav.classList.add('text-blue-600', 'bg-blue-50');
+        }
+
+        function loadSiswaByKelas() {
+            const kelas = document.getElementById('pilihanKelas').value;
+            const container = document.getElementById('siswaListContainer');
+            container.innerHTML = '';
+
+            if (!kelas) {
+                container.innerHTML = '<p class="text-xs text-slate-400 italic py-4 text-center">Silakan pilih Kelas terlebih dahulu.</p>';
+                return;
+            }
+
+            const listSiswa = studentDatabase[kelas] || [
+                `Siswa 1 (${kelas})`, `Siswa 2 (${kelas})`, `Siswa 3 (${kelas})`, 
+                `Siswa 4 (${kelas})`, `Siswa 5 (${kelas})`
+            ];
+
+            listSiswa.forEach((nama, idx) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between py-2 text-xs';
+                row.innerHTML = `
+                    <span class="font-medium text-slate-700">${idx + 1}. ${nama}</span>
+                    <div class="flex items-center gap-2">
+                        <label class="cursor-pointer font-bold text-slate-500 hover:text-amber-600">
+                            <input type="radio" name="ket_${idx}" value="S" onchange="updatePresensiCount()" class="mr-1">S
+                        </label>
+                        <label class="cursor-pointer font-bold text-slate-500 hover:text-blue-600">
+                            <input type="radio" name="ket_${idx}" value="I" onchange="updatePresensiCount()" class="mr-1">I
+                        </label>
+                        <label class="cursor-pointer font-bold text-slate-500 hover:text-red-600">
+                            <input type="radio" name="ket_${idx}" value="A" onchange="updatePresensiCount()" class="mr-1">A
+                        </label>
+                        <button type="button" onclick="clearRadio('ket_${idx}')" class="text-slate-300 hover:text-slate-500 ml-1"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function clearRadio(name) {
+            document.querySelectorAll(`input[name="${name}"]`).forEach(r => r.checked = false);
+            updatePresensiCount();
+        }
+
+        function updatePresensiCount() {
+            const checked = document.querySelectorAll('#siswaListContainer input[type="radio"]:checked');
+            document.getElementById('presensiCount').innerText = `${checked.length} Siswa Tidak Hadir`;
+        }
+
+        function previewImage(event) {
+            const input = event.target;
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').src = e.target.result;
+                    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; 
+        }
+
+        function getGeoLocation() {
+            const statusBadge = document.getElementById('geoBadge');
+            const sidebarStatus = document.getElementById('sidebarGpsStatus');
+            const sidebarIcon = document.getElementById('sidebarGpsIcon');
+
+            if (!navigator.geolocation) {
+                statusBadge.className = "mt-3 p-2 rounded-lg text-xs font-semibold text-center bg-red-100 text-red-800";
+                statusBadge.innerText = "Geolocation tidak didukung browser ini.";
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    userLat = pos.coords.latitude;
+                    userLng = pos.coords.longitude;
+                    document.getElementById('geoCoords').innerText = `${userLat.toFixed(5)}, ${userLng.toFixed(5)}`;
+
+                    const dist = calculateDistance(userLat, userLng, SCHOOL_LAT, SCHOOL_LNG);
+                    document.getElementById('geoDistance').innerText = `${Math.round(dist)} Meter`;
+
+                    if (dist <= MAX_RADIUS_METERS) {
+                        isLocationValid = true;
+                        statusBadge.className = "mt-3 p-2 rounded-lg text-xs font-semibold text-center bg-emerald-100 text-emerald-800";
+                        statusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Lokasi Terverifikasi (Area SMAN 2 Karanganyar)';
+                        sidebarStatus.innerText = "Dalam Radius";
+                        sidebarStatus.className = "text-emerald-600 font-medium";
+                        sidebarIcon.className = "w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs";
+                        sidebarIcon.innerHTML = '<i class="fa-solid fa-check"></i>';
+                    } else {
+                        isLocationValid = false;
+                        statusBadge.className = "mt-3 p-2 rounded-lg text-xs font-semibold text-center bg-red-100 text-red-800";
+                        statusBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Diluar Area Sekolah (${Math.round(dist)}m dari Sekolah)`;
+                        sidebarStatus.innerText = "Luar Radius";
+                        sidebarStatus.className = "text-red-600 font-medium";
+                        sidebarIcon.className = "w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xs";
+                        sidebarIcon.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                    }
+                    updateSubmitButton();
+                },
+                (err) => {
+                    statusBadge.className = "mt-3 p-2 rounded-lg text-xs font-semibold text-center bg-amber-100 text-amber-800";
+                    statusBadge.innerText = "Gagal mengambil lokasi GPS. Izinkan akses lokasi.";
+                    document.getElementById('geoCoords').innerText = "Izin Ditolak";
+                    updateSubmitButton();
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        function toggleBypassGps() {
+            updateSubmitButton();
+        }
+
+        function updateSubmitButton() {
+            const btn = document.getElementById('btnSimpan');
+            const isBypass = document.getElementById('bypassGps').checked;
+
+            if (isLocationValid || isBypass) {
+                btn.disabled = false;
+                btn.className = "flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2 shadow-lg cursor-pointer";
+            } else {
+                btn.disabled = true;
+                btn.className = "flex-1 bg-slate-300 text-slate-500 cursor-not-allowed font-bold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2 shadow";
+            }
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+
+            if (selectedJamList.length === 0) {
+                alert("Silakan pilih Jam Ke (1-10) terlebih dahulu.");
+                return;
+            }
+
+            const payload = {
+                nama_guru: document.getElementById('namaGuru').value,
+                mapel: document.getElementById('mapel').value,
+                kelas: document.getElementById('pilihanKelas').value,
+                jam_ke: selectedJamList.join(', '),
+                materi: document.getElementById('materi').value,
+                absensi: getAbsensiData(),
+                foto_url: "",
+                lokasi_gps: isLocationValid ? "Dalam Radius" : "Bypass GPS",
+                latitude: userLat,
+                longitude: userLng
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert("Jurnal Mengajar Berhasil Disimpan ke Database Neon!");
+                    resetForm();
+                    renderRekapTable();
+                    switchTab('rekapTab');
+                } else {
+                    alert("Gagal menyimpan data ke database.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Terjadi kesalahan koneksi ke database.");
+            }
+        }
+
+        function getAbsensiData() {
+            const results = [];
+            const container = document.getElementById('siswaListContainer');
+            const rows = container.querySelectorAll('.flex.items-center.justify-between');
+            
+            rows.forEach(row => {
+                const nama = row.querySelector('span').innerText;
+                const checkedRadio = row.querySelector('input[type="radio"]:checked');
+                if (checkedRadio) {
+                    results.push(`${nama} (${checkedRadio.value})`);
+                }
+            });
+            return results.length > 0 ? results.join(', ') : 'Nihil (Hadir Semua)';
+        }
+
+        function resetForm() {
+            document.getElementById('formJurnal').reset();
+            selectedJamList = [];
+            initJamGrid();
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            loadSiswaByKelas();
+            updateSubmitButton();
+        }
+
+        async function renderRekapTable() {
+            const tbody = document.getElementById('rekapTableBody');
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400">Memuat data dari Neon DB...</td></tr>`;
+
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json();
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 italic">Belum ada data jurnal di database.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = data.map(item => `
+                    <tr class="hover:bg-slate-50 border-b border-slate-100">
+                        <td class="p-3 font-medium text-slate-800">${new Date(item.waktu).toLocaleString('id-ID')}</td>
+                        <td class="p-3 font-bold text-blue-900">${item.kelas}</td>
+                        <td class="p-3"><span class="bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded">Jam ${item.jam_ke}</span></td>
+                        <td class="p-3">${item.mapel}</td>
+                        <td class="p-3 max-w-xs truncate">${item.materi}</td>
+                        <td class="p-3"><span class="text-amber-700 font-medium">${item.absensi}</span></td>
+                        <td class="p-3"><span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-medium">${item.lokasi_gps}</span></td>
+                        <td class="p-3 text-center">
+                            <button onclick="deleteJurnal(${item.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500">Gagal terhubung ke Database Neon.</td></tr>`;
+            }
+        }
+
+        async function deleteJurnal(id) {
+            if (confirm("Hapus jurnal ini dari database Neon?")) {
+                try {
+                    await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                    renderRekapTable();
+                } catch (err) {
+                    alert("Gagal menghapus data.");
+                }
+            }
+        }
+
+        function handleTugasLuarSubmit(e) {
+            e.preventDefault();
+            alert("Laporan Tugas Luar berhasil dikirim!");
+            document.getElementById('formTugasLuar').reset();
+        }
+
+        function exportToCSV() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
