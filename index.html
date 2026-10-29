@@ -284,6 +284,51 @@
     </main>
 
     <!-- KODE JAVASCRIPT APLIKASI DIBUNGKUS DENGAN TAG SCRIPT TERPISAH -->
+    window.onload = function() {
+    verifikasiSesiSSO();
+};
+
+function verifikasiSesiSSO() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ssoToken = urlParams.get('sso_token');
+
+    // 1. Jika membawa Token dari Portal Presensi
+    if (ssoToken) {
+        try {
+            const decodedData = JSON.parse(atob(decodeURIComponent(ssoToken)));
+            
+            // Cek kadaluarsa token (Misal maksimal 1 menit saat perpindahan halaman)
+            if (Date.now() - decodedData.time < 60000) {
+                // Simpan sesi lokal di domain jurnalmengajar
+                localStorage.setItem('jurnal_user_session', JSON.stringify(decodedData));
+                
+                // Bersihkan token dari URL agar tampak rapi
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                initAplikasiJurnal(decodedData);
+                return;
+            }
+        } catch (e) {
+            console.error("Token SSO tidak valid", e);
+        }
+    }
+
+    // 2. Jika tidak ada token URL, cek sesi lokal yang tersimpan
+    const localSession = JSON.parse(localStorage.getItem('jurnal_user_session'));
+    if (localSession) {
+        initAplikasiJurnal(localSession);
+    } else {
+        // 3. Jika tidak ada akses sama sekali, kembalikan ke Portal Utama Presensi
+        alert("Akses Terbatas! Anda harus login melalui Portal Utama SMADA.");
+        window.location.href = 'https://yhanedy.github.io/presensi-smandakra/';
+    }
+}
+
+function initAplikasiJurnal(user) {
+    console.log("Selamat Datang di Jurnal Mengajar:", user.nama);
+    document.getElementById('display-nama-guru').textContent = user.nama;
+    document.getElementById('display-nip-guru').textContent = user.nip;
+}
     <script>
         const API_URL = "/api/jurnal"; // URL ke backend Vercel / Render
 
@@ -320,7 +365,7 @@
             update();
             setInterval(update, 1000);
         }
-
+        
         function initJamGrid() {
             const container = document.getElementById('jamGrid');
             container.innerHTML = '';
