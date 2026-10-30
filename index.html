@@ -36,19 +36,30 @@
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
 
     <!-- Header Top -->
-    <header class="bg-blue-900 text-white shadow-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-3 pl-16 md:pl-20">
-            <i class="fa-solid fa-school text-2xl text-yellow-400"></i>
-            <div>
-                <h1 class="font-bold text-lg leading-tight">SMAN 2 KARANGANYAR</h1>
-                <p class="text-xs text-blue-200">Aplikasi Jurnal KBM & Absensi Presensi Guru</p>
-            </div>
+   <!-- Header Top dengan Tombol Login Admin -->
+<header class="bg-blue-900 text-white shadow-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3 pl-16 md:pl-20">
+        <i class="fa-solid fa-school text-2xl text-yellow-400"></i>
+        <div>
+            <h1 class="font-bold text-lg leading-tight">SMAN 2 KARANGANYAR</h1>
+            <p class="text-xs text-blue-200">Aplikasi Jurnal KBM & Presensi Guru</p>
         </div>
+    </div>
+    
+    <div class="flex items-center gap-4">
+        <!-- Jam & Tanggal (Tampil di Desktop) -->
         <div class="text-right text-xs md:text-sm hidden sm:block">
             <div id="clockDisplay" class="font-bold text-yellow-300"></div>
             <div id="dateDisplay" class="text-slate-200"></div>
         </div>
-    </header>
+
+        <!-- Tombol Akses Login Admin -->
+        <a href="login.html" class="bg-blue-800 hover:bg-blue-700 text-yellow-300 border border-yellow-400/30 font-bold text-xs px-3 py-2 rounded-xl transition flex items-center gap-2 shadow">
+            <i class="fa-solid fa-user-shield"></i>
+            <span class="hidden md:inline">Login Admin</span>
+        </a>
+    </div>
+</header>
 
     <!-- FLOATING SIDEBAR LEFT -->
     <aside id="sidebar" class="floating-sidebar fixed left-2 top-20 bottom-6 bg-white shadow-2xl rounded-2xl z-50 border border-slate-200 flex flex-col justify-between overflow-hidden">
