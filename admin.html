@@ -155,6 +155,7 @@
     </div>
 
     <!-- SCRIPT MANAJEMEN ADMIN -->
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             loadSsoUsers();
@@ -162,7 +163,43 @@
             loadMonitoringData();
             loadPhotoAudit();
         });
+// Proteksi Session Admin di admin.html
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Cek User yang sedang login di Supabase
+    const { data: { session } } = await supabaseClient.auth.getSession();
 
+    if (!session) {
+        // Jika belum login, lempar ke halaman login.html
+        window.location.href = "login.html";
+        return;
+    }
+
+    // 2. Cek apakah role user benar 'admin'
+    const { data: userData } = await supabaseClient
+        .from('user')
+        .select('role')
+        .eq('id', session.user.id) // atau eq('email', session.user.email)
+        .single();
+
+    if (!userData || userData.role !== 'admin') {
+        alert("Akses ditolak! Anda tidak memiliki hak akses Admin.");
+        await supabaseClient.auth.signOut();
+        window.location.href = "login.html";
+        return;
+    }
+
+    // Jika lolos verifikasi, load data admin
+    loadSsoUsers();
+    loadJadwalTable();
+    loadMonitoringData();
+    loadPhotoAudit();
+});
+
+// Fungsi Logout
+async function handleLogout() {
+    await supabaseClient.auth.signOut();
+    window.location.href = "login.html";
+}
         function switchAdminTab(tabId) {
             document.querySelectorAll('.admin-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
