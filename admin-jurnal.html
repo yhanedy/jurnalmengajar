@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel Jurnal - SMAN 2 Karanganyar</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Konfigurasi Turso Engine Direct API -->
+    <script src="js/config.js?v=admin_jurnal_v1"></script>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- PROTEKSI HAK AKSES ADMIN JURNAL -->
+    <script>
+        let currentUserSession = null;
+        (function verifikasiAdminJurnal() {
+            const rawUser = localStorage.getItem('smada_user');
+            if (!rawUser || rawUser === "null" || rawUser === "undefined") {
+                alert("Akses Ditolak! Anda harus login terlebih dahulu.");
+                window.location.replace('index.html');
+                return;
+            }
+            try {
+                currentUserSession = JSON.parse(rawUser);
+                const r = String(currentUserSession.role || '').toLowerCase();
+                if (!r.includes('admin') && !r.includes('superadmin') && !r.includes('super_admin') && !r.includes('jurnal')) {
+                    alert("Akses Ditolak! Anda tidak memiliki otoritas Admin Jurnal.");
+                    window.location.replace('jurnal.html');
+                }
+            } catch (e) {
+                window.location.replace('index.html');
+            }
+        })();
+    </script>
+
+    <!-- HEADER ADMIN -->
+    <header class="bg-amber-950 text-white shadow-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between border-b-4 border-amber-500">
+        <div class="flex items-center gap-3">
+            <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" 
+                 onError="this.onerror=null;this.src='https://placehold.co/100x100/003366/ffffff?text=SMADA'" 
+                 class="w-9 h-9 object-contain drop-shadow" alt="Logo">
+            <div>
+                <h1 class="font-black text-base sm:text-lg tracking-wide leading-tight">SMAN 2 KARANGANYAR</h1>
+                <p class="text-xs text-amber-300 font-bold">Control Panel Admin Jurnal KBM</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <a href="jurnal.html" class="bg-amber-800 hover:bg-amber-700 text-white font-bold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Ke Portal Jurnal</span>
+            </a>
+            <button onclick="logoutAdmin()" class="bg-red-600 hover:bg-red-700 text-white font-bold p-2 rounded-xl transition shadow">
+                <i class="fa-solid fa-power-off text-sm"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- CONTENT ADMIN MAIN -->
+    <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow space-y-4">
+        
+        <div class="bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-4 sm:p-6 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+                <h2 class="text-lg font-black text-amber-900 flex items-center gap-2">
+                    <i class="fa-solid fa-user-shield text-amber-600"></i>
+                    <span>MANAJEMEN ADMINISTRATOR JURNAL</span>
+                </h2>
+            </div>
+
+            <!-- SUB TABS NAVIGATION -->
+            <div class="flex gap-2 text-xs font-bold border-b pb-2 overflow-x-auto">
+                <button onclick="switchSubTab('admBelumKbm')" id="btn-admBelumKbm" class="subtab-btn px-4 py-2 rounded-xl bg-amber-600 text-white font-black">1. Deteksi Kelas Kosong</button>
+                <button onclick="switchSubTab('admPlotting')" id="btn-admPlotting" class="subtab-btn px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-black">2. Plotting Mapel Guru</button>
+                <button onclick="switchSubTab('admMasterMapel')" id="btn-admMasterMapel" class="subtab-btn px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-black">3. Master Mapel</button>
+            </div>
+
+            <!-- SUB-TAB 1: DETEKSI KELAS KOSONG -->
+            <div id="admBelumKbm" class="admin-subcontent space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-3 rounded-xl border">
+                    <div class="flex items-center gap-2 text-xs font-bold">
+                        <label>Pilih Jam Ke-:</label>
+                        <select id="filter-jam-belumbkm" onchange="muatDeteksiBelumKbm()" class="border-2 border-slate-300 p-1.5 rounded-lg font-mono text-xs">
+                            <option value="1">Jam 1</option><option value="2">Jam 2</option><option value="3">Jam 3</option>
+                            <option value="4">Jam 4</option><option value="5">Jam 5</option><option value="6">Jam 6</option>
+                            <option value="7">Jam 7</option><option value="8">Jam 8</option><option value="9">Jam 9</option><option value="10">Jam 10</option>
+                        </select>
+                    </div>
+                    <button onclick="muatDeteksiBelumKbm()" class="bg-amber-600 text-white px-3.5 py-1.5 text-xs rounded-lg font-black">Cek Status KBM</button>
+                </div>
+                <div id="grid-status-kelas" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5"></div>
+            </div>
+
+            <!-- SUB-TAB 2: PLOTTING MAPEL GURU -->
+            <div id="admPlotting" class="admin-subcontent hidden space-y-3">
+                <div class="overflow-x-auto max-h-96">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-100 uppercase font-black sticky top-0">
+                            <tr>
+                                <th class="p-2.5">Username</th>
+                                <th class="p-2.5">Nama Guru</th>
+                                <th class="p-2.5">Mapel Diampu</th>
+                                <th class="p-2.5 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabel-adm-plotting" class="divide-y divide-slate-100 font-semibold"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 3: MASTER MAPEL -->
+            <div id="admMasterMapel" class="admin-subcontent hidden space-y-3">
+                <div class="flex gap-2">
+                    <input type="text" id="input-mapel-baru" placeholder="Tambah Mapel Baru (Contoh: Fisika Lanjut)" class="border-2 rounded-xl px-3 py-2 text-xs flex-1 font-bold">
+                    <button onclick="tambahMasterMapel()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-black">Simpan Mapel</button>
+                </div>
+                <div id="list-master-mapel-badges" class="flex flex-wrap gap-2 pt-2"></div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- MODAL EDIT MAPEL GURU -->
+    <div id="modalEditMapelGuru" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3 shadow-2xl">
+            <h3 class="font-black text-slate-800 text-sm border-b pb-2">Set Multi-Mapel Guru</h3>
+            <p id="edit-mapel-guru-nama" class="text-xs font-bold text-blue-900">-</p>
+            <input type="hidden" id="edit-mapel-guru-username">
+
+            <div id="container-checkbox-mapel" class="max-h-48 overflow-y-auto space-y-2 text-xs border-2 p-3 rounded-xl font-bold"></div>
+
+            <div class="flex gap-2 pt-1">
+                <button onclick="simpanPlottingMapelGuru()" class="w-1/2 bg-blue-900 text-white font-black py-2 rounded-lg text-xs">Simpan</button>
+                <button onclick="tutupModalEditMapel()" class="w-1/2 bg-slate-200 text-slate-700 font-black py-2 rounded-lg text-xs">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-amber-950 text-slate-400 text-xs text-center py-3 border-t-2 border-amber-500">
+        <p>&copy; yhanedy@2026 SMAN 2 Karanganyar. All rights reserved.</p>
+    </footer>
+
+    <!-- SCRIPT LOGIKA ADMIN -->
+    <script>
+        window.onload = function() {
+            muatDeteksiBelumKbm();
+        };
+
+        function logoutAdmin() {
+            localStorage.removeItem('smada_user');
+            window.location.replace('index.html');
+        }
+
+        function switchSubTab(subId) {
+            document.querySelectorAll('.admin-subcontent').forEach(s => s.classList.add('hidden'));
+            document.getElementById(subId).classList.remove('hidden');
+
+            document.querySelectorAll('.subtab-btn').forEach(b => b.className = "subtab-btn px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-black");
+            document.getElementById('btn-' + subId).className = "subtab-btn px-4 py-2 rounded-xl bg-amber-600 text-white font-black";
+
+            if (subId === 'admBelumKbm') muatDeteksiBelumKbm();
+            if (subId === 'admPlotting') muatAdminPlottingGuru();
+            if (subId === 'admMasterMapel') muatMasterMapelBadges();
+        }
+
+        async function muatDeteksiBelumKbm() {
+            const container = document.getElementById('grid-status-kelas');
+            const jamSelected = document.getElementById('filter-jam-belumbkm').value;
+            container.innerHTML = '<p class="col-span-full text-xs text-slate-400 font-bold">Mengecek status KBM...</p>';
+
+            try {
+                const kelasData = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL ORDER BY kelas ASC');
+                const jurnalData = await queryTurso('SELECT DISTINCT kelas FROM jurnal_kbm WHERE jam_ke LIKE ?', [`%${jamSelected}%`]);
+
+                const kelasSudah = jurnalData ? jurnalData.map(j => j.kelas) : [];
+
+                container.innerHTML = kelasData.map(k => {
+                    const isSudah = kelasSudah.includes(k.kelas);
+                    return `
+                        <div class="p-2.5 rounded-xl border-2 text-center ${isSudah ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-rose-50 border-rose-300 text-rose-900'}">
+                            <span class="block font-black text-xs sm:text-sm">${k.kelas}</span>
+                            <span class="block text-[10px] font-black ${isSudah ? 'text-emerald-700' : 'text-rose-700'}">${isSudah ? 'Terisi' : 'KOSONG'}</span>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) { container.innerHTML = `<p class="col-span-full text-xs text-red-500 font-bold">Error: ${err.message}</p>`; }
+        }
+
+        async function muatAdminPlottingGuru() {
+            const tbody = document.getElementById('tabel-adm-plotting');
+            try {
+                const data = await queryTurso('SELECT username, nama, mapel FROM users ORDER BY nama ASC');
+                tbody.innerHTML = data.map(g => `
+                    <tr class="hover:bg-slate-50 border-b">
+                        <td class="p-2 font-mono">${g.username}</td>
+                        <td class="p-2 font-bold text-slate-900">${g.nama}</td>
+                        <td class="p-2 text-blue-900 font-bold">${g.mapel || '-'}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="bukaModalEditMapel('${g.username}', '${g.nama.replace(/'/g, "\\'")}', '${g.mapel || ''}')" class="bg-amber-100 text-amber-900 px-2 py-1 rounded-lg text-[11px] font-black">Edit Mapel</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) { console.error(err); }
+        }
+
+        async function bukaModalEditMapel(username, nama, currentMapelStr) {
+            document.getElementById('edit-mapel-guru-username').value = username;
+            document.getElementById('edit-mapel-guru-nama').textContent = `${nama} (${username})`;
+            const container = document.getElementById('container-checkbox-mapel');
+
+            try {
+                const masterData = await queryTurso('SELECT nama_mapel FROM master_mapel ORDER BY nama_mapel ASC');
+                const activeMapelArr = currentMapelStr.split(',').map(m => m.trim());
+
+                if (!masterData || masterData.length === 0) {
+                    container.innerHTML = '<p class="text-xs text-slate-400">Belum ada master mapel.</p>';
+                } else {
+                    container.innerHTML = masterData.map(m => `
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" value="${m.nama_mapel}" ${activeMapelArr.includes(m.nama_mapel) ? 'checked' : ''} class="cb-mapel-item rounded text-blue-600 w-4 h-4">
+                            <span>${m.nama_mapel}</span>
+                        </label>
+                    `).join('');
+                }
+                document.getElementById('modalEditMapelGuru').classList.remove('hidden');
+            } catch (err) { alert("Gagal muat mapel: " + err.message); }
+        }
+
+        function tutupModalEditMapel() { document.getElementById('modalEditMapelGuru').classList.add('hidden'); }
+
+        async function simpanPlottingMapelGuru() {
+            const username = document.getElementById('edit-mapel-guru-username').value;
+            const checkedMapel = Array.from(document.querySelectorAll('.cb-mapel-item:checked')).map(cb => cb.value);
+            const mapelStr = checkedMapel.join(', ');
+
+            try {
+                await queryTurso('UPDATE users SET mapel = ? WHERE username = ?', [mapelStr, username]);
+                alert("Plotting mapel guru berhasil diperbarui!");
+                tutupModalEditMapel();
+                muatAdminPlottingGuru();
+            } catch (err) { alert("Gagal update mapel: " + err.message); }
+        }
+
+        async function muatMasterMapelBadges() {
+            const container = document.getElementById('list-master-mapel-badges');
+            try {
+                const data = await queryTurso('SELECT * FROM master_mapel ORDER BY nama_mapel ASC');
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p class="text-xs text-slate-400 font-bold">Belum ada data master mapel.</p>';
+                    return;
+                }
+                container.innerHTML = data.map(m => `
+                    <span class="bg-blue-100 text-blue-900 px-2.5 py-1 rounded-lg text-xs font-black border border-blue-300 flex items-center gap-2">
+                        <span>${m.nama_mapel}</span>
+                        <button onclick="hapusMasterMapel(${m.id})" class="text-red-600 hover:text-red-800 font-bold">&times;</button>
+                    </span>
+                `).join('');
+            } catch (err) { console.error(err); }
+        }
+
+        async function tambahMasterMapel() {
+            const mapelBaru = document.getElementById('input-mapel-baru').value.trim();
+            if (!mapelBaru) return;
+
+            try {
+                await queryTurso('INSERT INTO master_mapel (nama_mapel) VALUES (?)', [mapelBaru]);
+                document.getElementById('input-mapel-baru').value = '';
+                muatMasterMapelBadges();
+            } catch (err) { alert("Gagal tambah mapel: " + err.message); }
+        }
+
+        async function hapusMasterMapel(id) {
+            if (!confirm("Hapus mapel ini?")) return;
+            try {
+                await queryTurso('DELETE FROM master_mapel WHERE id = ?', [id]);
+                muatMasterMapelBadges();
+            } catch (err) { alert("Gagal hapus: " + err.message); }
+        }
+    </script>
+</body>
+</html>
