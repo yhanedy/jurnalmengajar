@@ -3,107 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal SSO - SMAN 2 Karanganyar</title>
+    <title>Sistem Integrasi SSO - SMAN 2 Karanganyar</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Turso Direct API Config -->
-    <script src="js/config.js"></script>
 </head>
 <body class="bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 min-h-screen flex items-center justify-center p-4 font-sans text-slate-800">
 
-    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 border-4 border-yellow-400">
-        <!-- HEADER & LOGO -->
-        <div class="text-center space-y-2">
-            <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" 
-                 onError="this.onerror=null;this.src='https://placehold.co/100x100/003366/ffffff?text=SMADA'" 
-                 class="w-16 h-16 mx-auto object-contain drop-shadow" alt="Logo Sekolah">
-            <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-wide">SMAN 2 KARANGANYAR</h1>
-            <p class="text-xs text-blue-900 font-bold bg-blue-100 py-1 px-3 rounded-full inline-block">Portal Login Jurnal & Presensi</p>
+    <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center space-y-5 border-4 border-yellow-400">
+        <!-- LOGO & HEADER -->
+        <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" 
+             onError="this.onerror=null;this.src='https://placehold.co/100x100/003366/ffffff?text=SMADA'" 
+             class="w-16 h-16 mx-auto object-contain drop-shadow" alt="Logo Sekolah">
+        
+        <div>
+            <h1 class="text-lg font-black text-slate-900 tracking-wide">SMAN 2 KARANGANYAR</h1>
+            <p class="text-xs text-blue-900 font-bold bg-blue-100 py-1 px-3 rounded-full inline-block mt-1">Portal Jurnal Mengajar Guru</p>
         </div>
 
-        <!-- FORM LOGIN -->
-        <form id="formLogin" onsubmit="handleLogin(event)" class="space-y-4">
-            <div>
-                <label class="block text-xs font-black uppercase text-slate-700 mb-1">Username / NIP</label>
-                <div class="relative">
-                    <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-400"></i>
-                    <input type="text" id="loginUsername" required placeholder="Masukkan Username / NIP" class="w-full pl-10 pr-4 py-3 border-2 border-slate-300 rounded-xl font-bold text-sm focus:border-blue-900 focus:outline-none">
-                </div>
+        <!-- STATUS VERIFIKASI SESI -->
+        <div id="statusBox" class="p-4 rounded-2xl bg-slate-50 border-2 border-slate-200 space-y-2">
+            <div id="statusIcon" class="text-2xl text-blue-900">
+                <i class="fa-solid fa-spinner fa-spin"></i>
             </div>
+            <p id="statusMessage" class="text-xs font-bold text-slate-700">Memeriksa Otentikasi SSO...</p>
+        </div>
 
-            <div>
-                <label class="block text-xs font-black uppercase text-slate-700 mb-1">Password</label>
-                <div class="relative">
-                    <i class="fa-solid fa-key absolute left-3.5 top-3.5 text-slate-400"></i>
-                    <input type="password" id="loginPassword" required placeholder="Masukkan Password" class="w-full pl-10 pr-4 py-3 border-2 border-slate-300 rounded-xl font-bold text-sm focus:border-blue-900 focus:outline-none">
-                </div>
-            </div>
-
-            <button type="submit" id="btnLogin" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-black rounded-xl text-base shadow-lg transition flex items-center justify-center gap-2 border-2 border-yellow-500 cursor-pointer">
+        <!-- TOMBOL REDIRECT MANUAL JIKA DIBUTUHKAN -->
+        <div id="actionArea" class="hidden space-y-2 pt-2">
+            <a href="https://yhanedy.github.io/presensi-smandakra/" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-black rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2 border-2 border-yellow-500 block">
                 <i class="fa-solid fa-right-to-bracket"></i>
-                <span>MASUK KE SISTEM</span>
-            </button>
-        </form>
+                <span>LOGIN VIA PORTAL SSO PRESENSI</span>
+            </a>
+        </div>
 
-        <div id="loginAlert" class="hidden p-3 rounded-xl text-xs font-bold text-center bg-red-100 text-red-900 border border-red-300"></div>
-
-        <div class="text-center pt-2 text-[11px] text-slate-400 font-bold">
+        <div class="text-[10px] text-slate-400 font-bold pt-2">
             <p>&copy; yhanedy@2026 SMAN 2 Karanganyar.</p>
         </div>
     </div>
 
+    <!-- SCRIPT LOGIKA SSO PENERIMA TOKEN & LOCALSTORAGE -->
     <script>
-        async function handleLogin(e) {
-            e.preventDefault();
-            const usernameInput = document.getElementById('loginUsername').value.trim();
-            const passwordInput = document.getElementById('loginPassword').value.trim();
-            const alertBox = document.getElementById('loginAlert');
-            const btn = document.getElementById('btnLogin');
+        const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/";
 
-            alertBox.classList.add('hidden');
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Memeriksa Akun...`;
+        window.onload = function() {
+            verifikasiSesiSSO();
+        };
 
-            try {
-                // Kueri langsung ke tabel users Turso DB
-                const data = await queryTurso('SELECT username, nama, password, role, mapel FROM users WHERE LOWER(username) = LOWER(?) LIMIT 1', [usernameInput]);
+        function verifikasiSesiSSO() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ssoToken = urlParams.get('sso_token');
+            const statusMessage = document.getElementById('statusMessage');
+            const statusIcon = document.getElementById('statusIcon');
+            const actionArea = document.getElementById('actionArea');
 
-                if (!data || data.length === 0) {
-                    throw new Error("Username / NIP tidak terdaftar.");
+            // 1. Jika membawa sso_token dari Portal Presensi
+            if (ssoToken) {
+                try {
+                    const decodedData = JSON.parse(atob(decodeURIComponent(ssoToken)));
+                    
+                    // Simpan sesi user ke LocalStorage lokal jurnalmengajar
+                    localStorage.setItem('smada_user', JSON.stringify(decodedData));
+                    
+                    statusIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
+                    statusMessage.innerText = "Login SSO Berhasil! Mengalihkan...";
+
+                    // Alihkan berdasarkan Role
+                    setTimeout(() => {
+                        arahkanBerdasarkanRole(decodedData);
+                    }, 800);
+                    return;
+                } catch (e) {
+                    console.error("Token SSO tidak valid:", e);
                 }
+            }
 
-                const user = data[0];
-                if (user.password !== passwordInput) {
-                    throw new Error("Password yang Anda masukkan salah.");
+            // 2. Jika tidak ada token URL, cek sesi tersimpan di LocalStorage
+            const rawUser = localStorage.getItem('smada_user');
+            if (rawUser && rawUser !== "null" && rawUser !== "undefined") {
+                try {
+                    const user = JSON.parse(rawUser);
+                    statusIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
+                    statusMessage.innerText = `Selamat datang kembali, ${user.nama || user.username}!`;
+
+                    setTimeout(() => {
+                        arahkanBerdasarkanRole(user);
+                    }, 800);
+                    return;
+                } catch (e) {
+                    localStorage.removeItem('smada_user');
                 }
+            }
 
-                // Simpan Sesi SSO ke LocalStorage
-                const userSession = {
-                    username: user.username,
-                    nama: user.nama || user.username,
-                    role: user.role || 'mapel',
-                    mapel: user.mapel || '',
-                    loginTime: Date.now()
-                };
+            // 3. Jika belum login sama sekali
+            statusIcon.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-500"></i>`;
+            statusMessage.innerText = "Akses Terbatas! Anda harus login melalui Portal Utama SSO Presensi.";
+            actionArea.classList.remove('hidden');
 
-                localStorage.setItem('smada_user', JSON.stringify(userSession));
+            // Otomatis kembalikan ke Portal Utama Presensi setelah 2.5 detik
+            setTimeout(() => {
+                window.location.replace(PORTAL_SSO_URL);
+            }, 2500);
+        }
 
-                // Pengarahan halaman berdasarkan Role
-                const roleStr = String(user.role || '').toLowerCase();
-                if (roleStr.includes('admin') || roleStr.includes('superadmin') || roleStr.includes('jurnal')) {
-                    window.location.replace('admin-jurnal.html');
-                } else {
-                    window.location.replace('jurnal.html');
-                }
-
-            } catch (err) {
-                alertBox.textContent = err.message || "Gagal terhubung ke server database.";
-                alertBox.classList.remove('hidden');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>MASUK KE SISTEM</span>`;
+        function arahkanBerdasarkanRole(user) {
+            const r = String(user.role || '').toLowerCase();
+            if (r.includes('admin') || r.includes('superadmin') || r.includes('super_admin') || r.includes('jurnal')) {
+                window.location.replace('admin-jurnal.html');
+            } else {
+                window.location.replace('jurnal.html');
             }
         }
     </script>
