@@ -844,7 +844,50 @@
         function tutupModalRekapPdf() {
             document.getElementById('modalRekapPdf').classList.add('hidden');
         }
+        // FUNGSI MEMUAT DAFTAR KELAS KE DROPDOWN JURNAL KBM
+async function muatDaftarKelas() {
+    const selectKelas = document.querySelector('select[name="kelas"]') || document.getElementById('pilih-kelas');
+    if (!selectKelas) return;
 
+    try {
+        // 1. Coba ambil dari tabel master 'kelas' jika ada
+        let dataKelas = await queryTurso('SELECT DISTINCT kelas FROM kelas ORDER BY kelas ASC');
+        
+        // 2. Jika tabel 'kelas' kosong/tidak ada, ambil DISTINCT kelas dari tabel 'siswa'
+        if (!dataKelas || dataKelas.length === 0) {
+            dataKelas = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != "" ORDER BY kelas ASC');
+        }
+
+        // 3. Render ke Dropdown HTML
+        if (dataKelas && dataKelas.length > 0) {
+            let optionsHTML = '<option value="">-- PILIH KELAS --</option>';
+            dataKelas.forEach(item => {
+                const namaKelas = item.kelas || item.nama_kelas;
+                if (namaKelas) {
+                    optionsHTML += `<option value="${namaKelas}">${namaKelas}</option>`;
+                }
+            });
+            selectKelas.innerHTML = optionsHTML;
+        } else {
+            // Hardcoded Fallback jika DB kosong agar guru tetap bisa input Jurnal KBM
+            selectKelas.innerHTML = `
+                <option value="">-- PILIH KELAS --</option>
+                <option value="X-1">X-1</option><option value="X-2">X-2</option><option value="X-3">X-3</option>
+                <option value="XI-1">XI-1</option><option value="XI-2">XI-2</option><option value="XI-3">XI-3</option>
+                <option value="XII-1">XII-1</option><option value="XII-2">XII-2</option><option value="XII-3">XII-3</option>
+            `;
+        }
+    } catch (err) {
+        console.error("Gagal muat daftar kelas:", err);
+        // Fallback default
+        selectKelas.innerHTML = `
+            <option value="">-- PILIH KELAS --</option>
+            <option value="X-1">X-1</option><option value="X-2">X-2</option><option value="X-3">X-3</option>
+            <option value="XI-1">XI-1</option><option value="XI-2">XI-2</option><option value="XI-3">XI-3</option>
+            <option value="XII-1">XII-1</option><option value="XII-2">XII-2</option><option value="XII-3">XII-3</option>
+        `;
+    }
+}
         async function prosesGenerateRekapPdf() {
             const namaGuru = document.getElementById('pdfNamaGuru').value;
             const tglMulai = document.getElementById('pdfTglMulai').value;
