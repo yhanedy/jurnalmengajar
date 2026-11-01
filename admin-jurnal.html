@@ -8,31 +8,48 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Konfigurasi Turso Engine Direct API -->
-    <script src="js/config.js?v=admin_jurnal_v1"></script>
+    <!-- Konfigurasi Turso DB -->
+    <script src="js/config.js?v=admin_v3"></script>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col justify-between">
 
-    <!-- PROTEKSI HAK AKSES ADMIN JURNAL -->
+    <!-- VERIFIKASI SSO HAK AKSES ADMIN -->
     <script>
         let currentUserSession = null;
+        const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/index.html";
+
         (function verifikasiAdminJurnal() {
-            const rawUser = localStorage.getItem('smada_user');
-            if (!rawUser || rawUser === "null" || rawUser === "undefined") {
-                alert("Akses Ditolak! Anda harus login terlebih dahulu.");
-                window.location.replace('index.html');
-                return;
-            }
-            try {
-                currentUserSession = JSON.parse(rawUser);
-                const r = String(currentUserSession.role || '').toLowerCase();
-                if (!r.includes('admin') && !r.includes('superadmin') && !r.includes('super_admin') && !r.includes('jurnal')) {
-                    alert("Akses Ditolak! Anda tidak memiliki otoritas Admin Jurnal.");
-                    window.location.replace('jurnal.html');
+            const urlParams = new URLSearchParams(window.location.search);
+            const ssoToken = urlParams.get('sso_token');
+
+            if (ssoToken) {
+                try {
+                    const decodedUser = JSON.parse(atob(decodeURIComponent(ssoToken)));
+                    localStorage.setItem('smada_user', JSON.stringify(decodedUser));
+                    currentUserSession = decodedUser;
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } catch (e) {
+                    console.error(e);
                 }
-            } catch (e) {
-                window.location.replace('index.html');
             }
+
+            const rawUser = localStorage.getItem('smada_user');
+            if (rawUser && rawUser !== "null" && rawUser !== "undefined") {
+                try {
+                    currentUserSession = JSON.parse(rawUser);
+                    const r = String(currentUserSession.role || '').toLowerCase();
+                    if (!r.includes('admin') && !r.includes('superadmin') && !r.includes('super_admin') && !r.includes('jurnal')) {
+                        alert("Akses Ditolak! Anda tidak memiliki akses Admin.");
+                        window.location.replace('jurnal.html');
+                    }
+                    return;
+                } catch (e) {
+                    localStorage.removeItem('smada_user');
+                }
+            }
+
+            alert("Akses Terbatas! Silakan login melalui Portal SSO Presensi.");
+            window.location.replace(PORTAL_SSO_URL);
         })();
     </script>
 
@@ -152,7 +169,7 @@
 
         function logoutAdmin() {
             localStorage.removeItem('smada_user');
-            window.location.replace('index.html');
+            window.location.replace(PORTAL_SSO_URL);
         }
 
         function switchSubTab(subId) {
