@@ -1,6 +1,6 @@
 // Konfigurasi Turso Engine Direct API
 const TURSO_DATABASE_URL = "https://smada-db-yhanedy.turso.io";
-const TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSI...GANTI_DENGAN_TOKEN_TURSO_ANDA_JIKA_ADA...";
+const TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTM1MjMwMTMsImlkIjoiMDFhMTkyNzMtODIwMS03MGZkLWEzYjEtYmIwYTQ5NGU2YzQ5Iiwia2lkIjoieEFIcDc0WGZzOC1wbm56RVd5QjE3clJPamp4ZzBIZFhaQXRMM1BUWlZfdyIsInJpZCI6IjgyYWM0Yjk3LWMxYmYtNGEwYi04OTYxLTU5MTllMTE3N2FhNSJ9.YFPWSmlxck02zjnaTK6LFgFZdI68uJRVbbn1FfqB6InO-w3LJODhGR58XEkROb6Fko8KIqYgz_J7ozCdgZ0UDQ";
 
 /**
  * Fungsi pembantu eksekusi SQL kueri ke Turso Database via HTTP REST API
