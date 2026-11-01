@@ -1,4 +1,4 @@
-// Konfigurasi Turso Engine Direct API
+// Konfigurasi Turso Engine Direct API (Menggunakan protokol HTTPS)
 const TURSO_DATABASE_URL = "https://smada-db-yhanedy.turso.io";
 const TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTM1MjMwMTMsImlkIjoiMDFhMTkyNzMtODIwMS03MGZkLWEzYjEtYmIwYTQ5NGU2YzQ5Iiwia2lkIjoieEFIcDc0WGZzOC1wbm56RVd5QjE3clJPamp4ZzBIZFhaQXRMM1BUWlZfdyIsInJpZCI6IjgyYWM0Yjk3LWMxYmYtNGEwYi04OTYxLTU5MTllMTE3N2FhNSJ9.YFPWSmlxck02zjnaTK6LFgFZdI68uJRVbbn1FfqB6InO-w3LJODhGR58XEkROb6Fko8KIqYgz_J7ozCdgZ0UDQ";
 
@@ -9,10 +9,11 @@ const TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpY
  */
 async function queryTurso(sql, params = []) {
     try {
+        const cleanToken = TURSO_AUTH_TOKEN.trim().replace(/[\r\n\s]/g, '');
         const response = await fetch(`${TURSO_DATABASE_URL}/v2/pipeline`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${TURSO_AUTH_TOKEN.trim()}`,
+                'Authorization': `Bearer ${cleanToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
