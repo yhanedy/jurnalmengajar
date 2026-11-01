@@ -169,12 +169,57 @@
                                 <span>AMBIL FOTO KBM (KAMERA)</span>
                             </button>
 
-                            <!-- PREVIEW FOTO -->
-                            <div id="imagePreviewContainer" class="hidden pt-2">
-                                <img id="imagePreview" src="#" alt="Preview Foto" class="h-40 mx-auto rounded-2xl border-4 border-emerald-500 object-cover shadow-md">
-                            </div>
-                        </div>
+                          // FUNGSI MEMBACA DAN COMPRESS FOTO (MAKSIMAL LEBAR 800PX & KUALITAS 0.7)
+function previewImage(event) {
+    const input = event.target;
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
 
+        reader.onload = function(e) {
+            const img = new Image();
+            img.src = e.target.result;
+
+            img.onload = function() {
+                // Tentukan batas maksimal lebar/tinggi foto (misal: 800px)
+                const maxWidth = 800;
+                const maxHeight = 800;
+                let width = img.width;
+                let height = img.height;
+
+                // Hitung skala rasio gambar
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+
+                // Buat Canvas HTML untuk merekayasa/mengecilkan resolusi
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Kompres gambar ke format JPEG dengan kualitas 70% (0.7)
+                fotoBase64Data = canvas.toDataURL('image/jpeg', 0.7);
+
+                // Tampilkan preview foto yang sudah dikecilkan
+                document.getElementById('imagePreview').src = fotoBase64Data;
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+            };
+        };
+
+        reader.readAsDataURL(file);
+    }
+}
                         <!-- VALIDASI GEOLOKASI -->
                         <div class="bg-white p-4 rounded-2xl border-2 border-slate-200 flex flex-col justify-between">
                             <div>
