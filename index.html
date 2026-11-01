@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Integrasi SSO - SMAN 2 Karanganyar</title>
+    <title>Gateway Jurnal KBM - SMAN 2 Karanganyar</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -19,95 +19,95 @@
         
         <div>
             <h1 class="text-lg font-black text-slate-900 tracking-wide">SMAN 2 KARANGANYAR</h1>
-            <p class="text-xs text-blue-900 font-bold bg-blue-100 py-1 px-3 rounded-full inline-block mt-1">Portal Jurnal Mengajar Guru</p>
+            <p class="text-xs text-blue-900 font-bold bg-blue-100 py-1 px-3 rounded-full inline-block mt-1">Sistem Jurnal Mengajar Guru</p>
         </div>
 
-        <!-- STATUS VERIFIKASI SESI -->
+        <!-- STATUS PROSES OTENTIKASI -->
         <div id="statusBox" class="p-4 rounded-2xl bg-slate-50 border-2 border-slate-200 space-y-2">
-            <div id="statusIcon" class="text-2xl text-blue-900">
+            <div id="statusIcon" class="text-3xl text-blue-900">
                 <i class="fa-solid fa-spinner fa-spin"></i>
             </div>
-            <p id="statusMessage" class="text-xs font-bold text-slate-700">Memeriksa Otentikasi SSO...</p>
+            <p id="statusMessage" class="text-xs font-black text-slate-700">Memeriksa Sesi SSO...</p>
         </div>
 
-        <!-- TOMBOL REDIRECT MANUAL JIKA DIBUTUHKAN -->
-        <div id="actionArea" class="hidden space-y-2 pt-2">
+        <!-- TOMBOL KEMBALI KE PORTAL UTAMA (TAMPIL JIKA BELUM LOGIN) -->
+        <div id="actionArea" class="hidden space-y-2 pt-1">
             <a href="https://yhanedy.github.io/presensi-smandakra/" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-black rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2 border-2 border-yellow-500 block">
                 <i class="fa-solid fa-right-to-bracket"></i>
                 <span>LOGIN VIA PORTAL SSO PRESENSI</span>
             </a>
         </div>
 
-        <div class="text-[10px] text-slate-400 font-bold pt-2">
+        <div class="text-[10px] text-slate-400 font-bold pt-1">
             <p>&copy; yhanedy@2026 SMAN 2 Karanganyar.</p>
         </div>
     </div>
 
-    <!-- SCRIPT LOGIKA SSO PENERIMA TOKEN & LOCALSTORAGE -->
+    <!-- SCRIPT OTOMATIS GATEKEEPER SSO -->
     <script>
         const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/";
 
         window.onload = function() {
-            verifikasiSesiSSO();
+            prosesOtentikasiSSO();
         };
 
-        function verifikasiSesiSSO() {
+        function prosesOtentikasiSSO() {
             const urlParams = new URLSearchParams(window.location.search);
             const ssoToken = urlParams.get('sso_token');
             const statusMessage = document.getElementById('statusMessage');
             const statusIcon = document.getElementById('statusIcon');
             const actionArea = document.getElementById('actionArea');
 
-            // 1. Jika membawa sso_token dari Portal Presensi
+            // 1. JIKA DIAKSES DARI KOTAK JURNAL DENGAN MEMBAWA TOKEN SSO
             if (ssoToken) {
                 try {
                     const decodedData = JSON.parse(atob(decodeURIComponent(ssoToken)));
                     
-                    // Simpan sesi user ke LocalStorage lokal jurnalmengajar
+                    // Simpan sesi SSO ke LocalStorage lokal jurnalmengajar
                     localStorage.setItem('smada_user', JSON.stringify(decodedData));
                     
                     statusIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
-                    statusMessage.innerText = "Login SSO Berhasil! Mengalihkan...";
+                    statusMessage.innerText = "Sesi Ditemukan! Membuka Jurnal Mengajar...";
 
-                    // Alihkan berdasarkan Role
+                    // Langsung alihkan ke halaman jurnal tanpa form login
                     setTimeout(() => {
-                        arahkanBerdasarkanRole(decodedData);
-                    }, 800);
+                        arahkanKeJurnal(decodedData);
+                    }, 500);
                     return;
                 } catch (e) {
-                    console.error("Token SSO tidak valid:", e);
+                    console.error("Format token SSO tidak valid:", e);
                 }
             }
 
-            // 2. Jika tidak ada token URL, cek sesi tersimpan di LocalStorage
+            // 2. JIKA SUDAH PERNAH LOGIN SEBELUMNYA (ADA SESI TERSIMPAN)
             const rawUser = localStorage.getItem('smada_user');
             if (rawUser && rawUser !== "null" && rawUser !== "undefined") {
                 try {
                     const user = JSON.parse(rawUser);
                     statusIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
-                    statusMessage.innerText = `Selamat datang kembali, ${user.nama || user.username}!`;
+                    statusMessage.innerText = `Selamat Datang, ${user.nama || user.username}!`;
 
                     setTimeout(() => {
-                        arahkanBerdasarkanRole(user);
-                    }, 800);
+                        arahkanKeJurnal(user);
+                    }, 500);
                     return;
                 } catch (e) {
                     localStorage.removeItem('smada_user');
                 }
             }
 
-            // 3. Jika belum login sama sekali
-            statusIcon.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-500"></i>`;
-            statusMessage.innerText = "Akses Terbatas! Anda harus login melalui Portal Utama SSO Presensi.";
+            // 3. JIKA BELUM LOGIN SAMA SEKALI
+            statusIcon.innerHTML = `<i class="fa-solid fa-lock text-amber-500"></i>`;
+            statusMessage.innerText = "Akses Terbatas! Silakan login melalui Portal SSO Presensi.";
             actionArea.classList.remove('hidden');
 
-            // Otomatis kembalikan ke Portal Utama Presensi setelah 2.5 detik
+            // Otomatis kembalikan ke Portal Utama Presensi setelah 2 detik
             setTimeout(() => {
                 window.location.replace(PORTAL_SSO_URL);
-            }, 2500);
+            }, 2000);
         }
 
-        function arahkanBerdasarkanRole(user) {
+        function arahkanKeJurnal(user) {
             const r = String(user.role || '').toLowerCase();
             if (r.includes('admin') || r.includes('superadmin') || r.includes('super_admin') || r.includes('jurnal')) {
                 window.location.replace('admin-jurnal.html');
