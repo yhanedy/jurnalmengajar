@@ -12,7 +12,7 @@ async function queryTurso(sql, params = []) {
         const response = await fetch(`${TURSO_DATABASE_URL}/v2/pipeline`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${TURSO_AUTH_TOKEN}`,
+                'Authorization': `Bearer ${TURSO_AUTH_TOKEN.trim()}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
