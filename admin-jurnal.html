@@ -9,7 +9,7 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Konfigurasi Turso DB Engine -->
-    <script src="js/config.js?v=20261101_v3"></script>
+    <script src="js/config.js?v=20261101_v5"></script>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col justify-between">
 
@@ -53,7 +53,7 @@
         })();
     </script>
 
-    <!-- HEADER ADMIN (BIRU TUA & EMAN) -->
+    <!-- HEADER ADMIN (BIRU TUA & EMAS) -->
     <header class="bg-blue-950 text-white shadow-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between border-b-4 border-yellow-400">
         <div class="flex items-center gap-3">
             <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" 
@@ -96,7 +96,7 @@
                 </div>
             </div>
 
-            <!-- SUB TABS NAVIGATION (HANYA 2 MENU: KELAS KOSONG & PLOTTING MAPEL) -->
+            <!-- SUB TABS NAVIGATION -->
             <div class="flex gap-2 text-xs font-bold border-b pb-2 overflow-x-auto">
                 <button onclick="switchSubTab('admBelumKbm')" id="btn-admBelumKbm" class="subtab-btn px-4 py-2.5 rounded-xl bg-blue-950 text-white font-black shadow-sm transition">
                     <i class="fa-solid fa-chalkboard-user mr-1.5 text-yellow-400"></i>1. Deteksi Kelas Kosong
@@ -107,22 +107,25 @@
             </div>
 
             <!-- SUB-TAB 1: DETEKSI KELAS KOSONG -->
-            <div id="admBelumKbm" class="admin-subcontent space-y-3">
-                <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                    <div class="flex items-center gap-2 text-xs font-bold text-slate-800">
-                        <label>Filter Jam Ke-:</label>
-                        <select id="filter-jam-belumbkm" onchange="muatDeteksiBelumKbm()" class="border-2 border-blue-300 p-1.5 rounded-lg font-black text-xs bg-white text-blue-950 outline-none">
-                            <option value="1">Jam 1</option><option value="2">Jam 2</option><option value="3">Jam 3</option>
-                            <option value="4">Jam 4</option><option value="5">Jam 5</option><option value="6">Jam 6</option>
-                            <option value="7">Jam 7</option><option value="8">Jam 8</option><option value="9">Jam 9</option><option value="10">Jam 10</option>
-                        </select>
+            <div id="admBelumKbm" class="admin-subcontent space-y-4">
+                
+                <!-- FILTER KOTAK-KOTAK JAM 1 - 10 -->
+                <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-black uppercase text-blue-950 flex items-center gap-1.5">
+                            <i class="fa-solid fa-clock text-blue-900"></i>
+                            <span>Pilih Jam Ke- (Klik Angka 1 - 10):</span>
+                        </label>
+                        <button onclick="muatDeteksiBelumKbm()" class="bg-blue-950 hover:bg-blue-900 text-white px-3 py-1 text-[11px] rounded-lg font-black transition flex items-center gap-1 shadow">
+                            <i class="fa-solid fa-arrows-rotate text-yellow-300"></i> Refresh
+                        </button>
                     </div>
-                    <button onclick="muatDeteksiBelumKbm()" class="bg-blue-900 hover:bg-blue-950 text-white px-4 py-1.5 text-xs rounded-xl font-black shadow transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-arrows-rotate text-yellow-300"></i> Refresh Status
-                    </button>
+
+                    <!-- GRID KOTAK JAM 1-10 -->
+                    <div id="grid-filter-jam" class="grid grid-cols-5 sm:grid-cols-10 gap-2"></div>
                 </div>
 
-                <!-- GRID KARTU KELAS (WARNA BIRU TUA / PROSESSING) -->
+                <!-- GRID KARTU KELAS STATUS TERISI / KOSONG -->
                 <div id="grid-status-kelas" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"></div>
             </div>
 
@@ -160,7 +163,7 @@
             </div>
 
             <div id="modalDetailKelasContent" class="space-y-3 text-xs">
-                <!-- Konten Detail KBM akan dimuat dinamis -->
+                <!-- Konten Detail KBM dimuat dinamis -->
             </div>
 
             <div class="pt-2 border-t text-right">
@@ -192,7 +195,6 @@
 
     <!-- SCRIPT LOGIKA ADMIN -->
     <script>
-        // DAFTAR PRESET MAPEL SMADA
         const PRESET_MAPEL_SMADA = [
             "Pendidikan Agama Islam", "Pendidikan Agama Kristen", "Pendidikan Agama Katolik", 
             "Pendidikan Agama Hindu", "Pendidikan Agama Buddha", "Pendidikan Agama Konghucu", 
@@ -204,17 +206,46 @@
         ];
 
         let globalJurnalRecords = [];
+        let activeSelectedJam = 1; // Default ke Jam 1
 
         window.onload = function() {
-            // Set tanggal default ke hari ini (YYYY-MM-DD)
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('filterTanggalKbm').value = today;
+            
+            initJamGridFilter();
             muatDeteksiBelumKbm();
         };
 
         function logoutAdmin() {
             localStorage.removeItem('smada_user');
             window.location.replace(PORTAL_SSO_URL);
+        }
+
+        /* GENERATE KOTAK FILTER JAM 1 - 10 */
+        function initJamGridFilter() {
+            const container = document.getElementById('grid-filter-jam');
+            container.innerHTML = '';
+            for (let i = 1; i <= 10; i++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.innerText = i;
+                btn.id = `btn-jam-filter-${i}`;
+                
+                if (i === activeSelectedJam) {
+                    btn.className = "py-2 font-black rounded-xl text-xs sm:text-sm bg-blue-950 text-yellow-300 border-2 border-yellow-400 shadow-md transition";
+                } else {
+                    btn.className = "py-2 font-black rounded-xl text-xs sm:text-sm bg-white text-slate-800 border-2 border-slate-300 hover:bg-yellow-100 transition";
+                }
+                
+                btn.onclick = () => pilihJamFilter(i);
+                container.appendChild(btn);
+            }
+        }
+
+        function pilihJamFilter(jamNumber) {
+            activeSelectedJam = jamNumber;
+            initJamGridFilter();
+            muatDeteksiBelumKbm();
         }
 
         function switchSubTab(subId) {
@@ -230,18 +261,15 @@
 
         async function muatDeteksiBelumKbm() {
             const container = document.getElementById('grid-status-kelas');
-            const jamSelected = document.getElementById('filter-jam-belumbkm').value;
             const tglSelected = document.getElementById('filterTanggalKbm').value;
 
             container.innerHTML = '<p class="col-span-full text-xs text-slate-400 font-bold py-8 text-center">Memuat status KBM kelas...</p>';
 
             try {
-                // Query seluruh daftar kelas dari tabel siswa
                 const kelasData = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL ORDER BY kelas ASC');
                 
-                // Query jurnal KBM berdasarkan tanggal & jam ke-
                 const sqlJurnal = `SELECT * FROM jurnal_kbm WHERE (created_at LIKE ? OR date(created_at) = ?) AND jam_ke LIKE ?`;
-                globalJurnalRecords = await queryTurso(sqlJurnal, [`${tglSelected}%`, tglSelected, `%${jamSelected}%`]);
+                globalJurnalRecords = await queryTurso(sqlJurnal, [`${tglSelected}%`, tglSelected, `%${activeSelectedJam}%`]);
 
                 if (!kelasData || kelasData.length === 0) {
                     container.innerHTML = '<p class="col-span-full text-xs text-red-500 font-bold text-center">Data kelas tidak ditemukan.</p>';
@@ -249,12 +277,11 @@
                 }
 
                 container.innerHTML = kelasData.map(k => {
-                    // Cari record KBM untuk kelas ini
                     const recordKbm = globalJurnalRecords.find(j => String(j.kelas).trim().toUpperCase() === String(k.kelas).trim().toUpperCase());
                     const isTerisi = !!recordKbm;
 
                     return `
-                        <div onclick="bukaModalDetailKelas('${k.kelas}', '${jamSelected}', '${tglSelected}')" 
+                        <div onclick="bukaModalDetailKelas('${k.kelas}', '${activeSelectedJam}', '${tglSelected}')" 
                              class="p-3.5 rounded-2xl border-2 text-center transition cursor-pointer hover:scale-105 shadow-sm ${
                                 isTerisi 
                                 ? 'bg-gradient-to-br from-blue-950 to-indigo-900 border-blue-950 text-white hover:shadow-blue-900/30' 
@@ -340,7 +367,6 @@
             tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">Memuat data guru...</td></tr>';
 
             try {
-                // Query data user guru beserta tanggal terakhir jurnal KBM dikirim
                 const sqlGuru = `
                     SELECT u.username, u.nama, u.mapel, MAX(j.created_at) as terakhir_akses
                     FROM users u
