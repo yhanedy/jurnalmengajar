@@ -8,8 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Konfigurasi Turso DB Engine -->
-    <script src="js/config.js?v=20261101_jurnal_sso_mapel_fix"></script>
+    <!-- Konfigurasi Turso DB Engine / Cloudflare Worker -->
+    <script src="js/config.js?v=20261102_jurnal_sso_secured"></script>
 
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -44,7 +44,7 @@
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col justify-between">
 
-    <!-- VERIFIKASI SESI SSO PRESENSI -->
+    <!-- VERIFIKASI SESI SSO SECURED & TIME-BOUND CHECK -->
     <script>
         let currentUserSession = null;
         const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/index.html";
@@ -53,11 +53,28 @@
             const urlParams = new URLSearchParams(window.location.search);
             const ssoToken = urlParams.get('sso_token');
 
+            // 1. JIKA PEMANGGILAN MEMBAWA TOKEN SSO BARU
             if (ssoToken) {
                 try {
                     const decodedUser = JSON.parse(atob(decodeURIComponent(ssoToken)));
-                    localStorage.setItem('smada_user', JSON.stringify(decodedUser));
-                    currentUserSession = decodedUser;
+                    
+                    // Keamanan: Validasi batas waktu token (maksimal 60 detik)
+                    if (decodedUser.t && (Date.now() - decodedUser.t > 60000)) {
+                        alert("Token SSO telah kadaluwarsa. Silakan login kembali dari Portal Presensi.");
+                        window.location.replace(PORTAL_SSO_URL);
+                        return;
+                    }
+
+                    const formattedUser = {
+                        username: decodedUser.u || decodedUser.username,
+                        nama: decodedUser.n || decodedUser.nama,
+                        role: decodedUser.r || decodedUser.role
+                    };
+
+                    localStorage.setItem('smada_user', JSON.stringify(formattedUser));
+                    currentUserSession = formattedUser;
+                    
+                    // Bersihkan parameter sso_token dari URL untuk keamanan histori browser
                     window.history.replaceState({}, document.title, window.location.pathname);
                     return;
                 } catch (e) {
@@ -65,16 +82,18 @@
                 }
             }
 
+            // 2. CEK SESI TERSIMPAN
             const rawUser = localStorage.getItem('smada_user');
             if (rawUser && rawUser !== "null" && rawUser !== "undefined") {
                 try {
                     currentUserSession = JSON.parse(rawUser);
-                    return;
+                    if (currentUserSession && currentUserSession.username) return;
                 } catch (e) {
                     localStorage.removeItem('smada_user');
                 }
             }
 
+            // 3. JIKA DITOLAK -> REDIRECT KE PORTAL SSO
             alert("Akses Terbatas! Silakan login melalui Portal SSO Presensi.");
             window.location.replace(PORTAL_SSO_URL);
         })();
@@ -167,9 +186,7 @@
                 <div class="bg-gradient-to-r from-blue-950 to-indigo-900 text-white p-4 rounded-2xl shadow flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div class="space-y-0.5">
                         <span class="text-[10px] font-black uppercase text-yellow-300 tracking-wider">Tanggal & Hari Pelaporan KBM</span>
-                        <h2 id="displayHariTanggalBesar" class="text-lg sm:text-2xl font-black text-white leading-tight">
-                            -
-                        </h2>
+                        <h2 id="displayHariTanggalBesar" class="text-lg sm:text-2xl font-black text-white leading-tight">-</h2>
                     </div>
 
                     <div class="flex items-center gap-2 bg-blue-900/90 border border-blue-400/40 px-3 py-1.5 rounded-xl self-start sm:self-auto">
@@ -181,17 +198,18 @@
 
                 <form id="formJurnal" onsubmit="handleFormSubmit(event)" class="space-y-4">
                     
-                    <!-- KONTINER PROFIL GURU & MAPEL TERKONEKSI USER -->
+                    <!-- KONTINER PROFIL GURU (TERKUNCI SSO) & MAPEL / KELAS -->
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div id="containerNamaGuruBox" class="bg-slate-50 p-3 rounded-xl border-2 border-slate-200 relative">
+                        <div id="containerNamaGuruBox" class="bg-slate-100 p-3 rounded-xl border-2 border-slate-300 relative">
                             <label class="block text-[11px] font-black uppercase text-slate-600 mb-1 flex items-center justify-between">
-                                <span>Nama Guru</span>
+                                <span>Guru Mengajar (SSO)</span>
                                 <button type="button" onclick="bukaModalRekapPdf()" title="Cetak Rekap Jurnal PDF Guru" class="text-emerald-700 hover:text-emerald-900 font-bold text-xs flex items-center gap-1 bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded-md transition cursor-pointer">
                                     <i class="fa-solid fa-file-pdf"></i>
                                     <span>Rekap PDF</span>
                                 </button>
                             </label>
-                            <input type="text" id="namaGuru" readonly required class="w-full px-3 py-2 border-2 border-slate-300 rounded-lg bg-slate-200 font-black text-slate-800 text-xs sm:text-sm">
+                            <!-- Nama Guru Terkunci Otomatis dari SSO -->
+                            <input type="text" id="namaGuru" readonly required class="w-full px-3 py-2 border-2 border-slate-300 rounded-lg bg-slate-200 font-black text-slate-800 text-xs sm:text-sm cursor-not-allowed">
                         </div>
 
                         <div class="bg-yellow-50 p-3 rounded-xl border-2 border-yellow-300">
@@ -207,7 +225,7 @@
                         <div class="bg-blue-50 p-3 rounded-xl border-2 border-blue-300">
                             <label class="block text-[11px] font-black uppercase text-blue-950 mb-1">Pilihan Kelas</label>
                             <select id="pilihanKelas" onchange="loadSiswaByKelasTurso()" required class="w-full px-3 py-2 border-2 border-blue-400 rounded-lg font-black text-slate-900 text-xs sm:text-sm bg-white outline-none">
-                                <option value="">-- PILIH KELAS --</option>
+                                <option value="">-- MEMUAT KELAS... --</option>
                             </select>
                         </div>
                     </div>
@@ -226,7 +244,7 @@
                     <div class="border-2 border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
                         <div class="flex flex-wrap justify-between items-center gap-2 border-b pb-2">
                             <div>
-                                <h3 class="font-black text-xs sm:text-sm text-slate-800">Siswa Tidak Hadir</h3>
+                                <h3 class="font-black text-xs sm:text-sm text-slate-800">Presensi & Siswa Tidak Hadir</h3>
                                 <p class="text-[10px] text-slate-500 font-semibold">Pilih S (Sakit), I (Izin), A (Alpha).</p>
                             </div>
                             <span id="presensiCount" class="text-[11px] bg-red-100 text-red-800 font-black px-2.5 py-1 rounded-full border border-red-200">0 Siswa Tidak Hadir</span>
@@ -412,7 +430,7 @@
             initJamGrid();
             getGeoLocation();
             initSidebarPin();
-            muatDaftarKelas();
+            muatDaftarKelasTurso();
         };
 
         function updateDisplayTanggalForm() {
@@ -428,63 +446,31 @@
             window.location.replace(PORTAL_SSO_URL);
         }
 
-        /* LOGIKA INVENTARISASI GURU & FIX/DOUBLE MAPEL AUTOMATION */
+        /* 1. KUNCI IDENTITAS GURU DARI SSO LOGIN (TIDAK BISA DIUBAH DAFTARNYA) */
         async function initIdentitasGuru() {
             if (!currentUserSession) return;
 
             const inputNamaGuru = document.getElementById('namaGuru');
-            const containerBox = document.getElementById('containerNamaGuruBox');
+            const displayNama = document.getElementById('display-nama-guru');
+            const pdfNama = document.getElementById('pdfNamaGuru');
             const r = String(currentUserSession.role || '').toLowerCase();
 
-            // 1. AKSES UNTUK GURU DENGAN HAK ADMIN / SUPERADMIN
+            // Tampilkan tombol Admin Panel khusus Admin / Super Admin
             if (r.includes('admin') || r.includes('superadmin') || r.includes('super_admin')) {
                 document.getElementById('nav-btn-admin').classList.remove('hidden');
-                
-                try {
-                    const dataGuru = await queryTurso('SELECT username, nama, mapel FROM users ORDER BY nama ASC');
-                    
-                    if (dataGuru && dataGuru.length > 0) {
-                        containerBox.innerHTML = `
-                            <label class="block text-[11px] font-black uppercase text-slate-600 mb-1 flex items-center justify-between">
-                                <span>Pilih Guru Mengajar</span>
-                                <button type="button" onclick="bukaModalRekapPdf()" class="text-emerald-700 hover:text-emerald-900 font-bold text-xs flex items-center gap-1 bg-emerald-100 px-2 py-0.5 rounded-md cursor-pointer">
-                                    <i class="fa-solid fa-file-pdf"></i> Rekap PDF
-                                </button>
-                            </label>
-                            <select id="namaGuruSelect" onchange="onGuruAdminChanged(this)" class="w-full px-3 py-2 border-2 border-blue-400 rounded-lg font-black text-slate-900 text-xs sm:text-sm bg-white outline-none cursor-pointer">
-                                <option value="">-- PILIH NAMA GURU --</option>
-                                ${dataGuru.map(g => `<option value="${g.username}" data-nama="${g.nama}" data-mapel="${g.mapel || ''}">${g.nama} (${g.username})</option>`).join('')}
-                            </select>
-                            <input type="hidden" id="namaGuru" value="${currentUserSession.nama || currentUserSession.username}">
-                        `;
-                    }
-                } catch (err) {
-                    console.error("Gagal muat daftar guru admin:", err);
-                }
-            } else {
-                // 2. AKSES UNTUK GURU BIASA (TERKUNCI SESUAI SSO LOGIN)
-                const nama = currentUserSession.nama || currentUserSession.username;
-                document.getElementById('display-nama-guru').textContent = nama;
-                inputNamaGuru.value = nama;
-                document.getElementById('pdfNamaGuru').value = nama;
-
-                // Muat Mapel Terdaftar
-                muatMapelGuruAktif(currentUserSession.username);
             }
+
+            // Kunci Nama Guru sesuai SSO
+            const namaGuruSso = currentUserSession.nama || currentUserSession.username;
+            inputNamaGuru.value = namaGuruSso;
+            if (displayNama) displayNama.textContent = namaGuruSso;
+            if (pdfNama) pdfNama.value = namaGuruSso;
+
+            // Muat Pilihan Mapel Guru Terdaftar
+            await muatMapelGuruAktif(currentUserSession.username);
         }
 
-        function onGuruAdminChanged(selectEl) {
-            const selectedOption = selectEl.options[selectEl.selectedIndex];
-            const namaGuru = selectedOption.getAttribute('data-nama') || '';
-            const mapelStr = selectedOption.getAttribute('data-mapel') || '';
-
-            document.getElementById('namaGuru').value = namaGuru;
-            document.getElementById('display-nama-guru').textContent = namaGuru;
-            document.getElementById('pdfNamaGuru').value = namaGuru;
-
-            prosesOpsiMapelDropdown(mapelStr);
-        }
-
+        /* 2. MUAT MAPEL HANYA PADA KOLOM MAPEL DARI TURSO DATABASE */
         async function muatMapelGuruAktif(usernameGuru) {
             if (!usernameGuru) return;
             try {
@@ -493,7 +479,6 @@
                 if (data && data.length > 0 && data[0].mapel) {
                     prosesOpsiMapelDropdown(data[0].mapel);
                 } else {
-                    // Jika mapel di database belum diisi, buatkan opsi umum
                     prosesOpsiMapelDropdown("Umum / Lainnya");
                 }
             } catch (err) { 
@@ -502,13 +487,12 @@
             }
         }
 
-        /* FUNGSI OTOMATISASI FIX MAPEL SINGLE vs DOUBLE MAPEL */
         function prosesOpsiMapelDropdown(mapelStr) {
             const selectMapel = document.getElementById('mapelSelect');
             const badgeStatus = document.getElementById('badgeMapelStatus');
 
             if (!mapelStr) {
-                selectMapel.innerHTML = '<option value="">-- PINTU MAPEL KOSONG --</option>';
+                selectMapel.innerHTML = '<option value="">-- TANPA MAPEL --</option>';
                 if (badgeStatus) { badgeStatus.textContent = 'Tanpa Mapel'; badgeStatus.className = 'text-[9px] font-extrabold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700'; }
                 return;
             }
@@ -516,17 +500,15 @@
             const mapelArr = mapelStr.split(',').map(m => m.trim()).filter(Boolean);
 
             if (mapelArr.length === 1) {
-                // HANYA 1 MAPEL -> OTOMATIS SERING TERPILIH (FIX) & LOCKED DILAYAR
                 const mapelUtama = mapelArr[0];
                 selectMapel.innerHTML = `<option value="${mapelUtama}" selected>${mapelUtama}</option>`;
-                selectMapel.disabled = false; // Tetap aktif tapi ter-select default
+                selectMapel.disabled = false;
                 
                 if (badgeStatus) {
                     badgeStatus.textContent = 'Fix Mapel Terkunci';
                     badgeStatus.className = 'text-[9px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300';
                 }
             } else if (mapelArr.length > 1) {
-                // DOUBLE MAPEL -> BERIKAN PILIHAN MULTI MAPEL KEPADA GURU
                 selectMapel.disabled = false;
                 let optionsHTML = '<option value="">-- PILIH MAPEL (DOUBLE MAPEL) --</option>';
                 mapelArr.forEach(m => {
@@ -541,14 +523,16 @@
             }
         }
 
-        /* FUNGSI MEMUAT DAFTAR KELAS DENGAN SINKRONISASI LENGKAP */
-        async function muatDaftarKelas() {
+        /* 3. KONEKSI PULL DATA KELAS LANGSUNG DARI TABEL TURSO DATABASE */
+        async function muatDaftarKelasTurso() {
             const selectKelas = document.getElementById('pilihanKelas');
             if (!selectKelas) return;
 
             try {
+                // Kueri 1: Cek dari tabel kelas utama
                 let dataKelas = await queryTurso('SELECT DISTINCT kelas FROM kelas ORDER BY kelas ASC');
                 
+                // Kueri Fallback 2: Cek dari tabel siswa jika tabel kelas belum terisi
                 if (!dataKelas || dataKelas.length === 0) {
                     dataKelas = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != "" ORDER BY kelas ASC');
                 }
@@ -563,24 +547,15 @@
                     });
                     selectKelas.innerHTML = optionsHTML;
                 } else {
-                    selectKelas.innerHTML = `
-                        <option value="">-- PILIH KELAS --</option>
-                        <option value="X-1">X-1</option><option value="X-2">X-2</option><option value="X-3">X-3</option>
-                        <option value="XI-1">XI-1</option><option value="XI-2">XI-2</option><option value="XI-3">XI-3</option>
-                        <option value="XII-1">XII-1</option><option value="XII-2">XII-2</option><option value="XII-3">XII-3</option>
-                    `;
+                    selectKelas.innerHTML = '<option value="">-- TIDAK ADA DATA KELAS --</option>';
                 }
             } catch (err) {
-                console.error("Gagal muat daftar kelas:", err);
-                selectKelas.innerHTML = `
-                    <option value="">-- PILIH KELAS --</option>
-                    <option value="X-1">X-1</option><option value="X-2">X-2</option><option value="X-3">X-3</option>
-                    <option value="XI-1">XI-1</option><option value="XI-2">XI-2</option><option value="XI-3">XI-3</option>
-                    <option value="XII-1">XII-1</option><option value="XII-2">XII-2</option><option value="XII-3">XII-3</option>
-                `;
+                console.error("Gagal koneksi data kelas dari Turso DB:", err);
+                selectKelas.innerHTML = '<option value="">-- GAGAL MEMUAT KELAS --</option>';
             }
         }
 
+        /* 4. KONEKSI PULL DATA SISWA DARI TABEL TURSO DATABASE */
         async function loadSiswaByKelasTurso() {
             const kelasVal = document.getElementById('pilihanKelas').value;
             const container = document.getElementById('siswaListContainer');
@@ -591,19 +566,23 @@
                 return;
             }
 
-            try {
-                const data = await queryTurso('SELECT nisn, nama FROM siswa WHERE UPPER(kelas) = UPPER(?) ORDER BY nama ASC', [kelasVal]);
+            container.innerHTML = '<p class="text-xs font-bold text-blue-600 italic py-4 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data siswa...</p>';
 
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<p class="text-xs font-bold text-slate-500 italic py-4 text-center">Tidak ada data siswa terdaftar untuk kelas ini.</p>';
+            try {
+                // Kueri langsung ke tabel siswa di Turso DB
+                const dataSiswa = await queryTurso('SELECT nisn, nama FROM siswa WHERE UPPER(TRIM(kelas)) = UPPER(TRIM(?)) ORDER BY nama ASC', [kelasVal]);
+
+                if (!dataSiswa || dataSiswa.length === 0) {
+                    container.innerHTML = '<p class="text-xs font-bold text-slate-500 italic py-4 text-center">Tidak ada data siswa terdaftar untuk kelas ini di Database.</p>';
                     return;
                 }
 
-                data.forEach((s, idx) => {
+                container.innerHTML = '';
+                dataSiswa.forEach((s, idx) => {
                     const row = document.createElement('div');
                     row.className = 'flex items-center justify-between py-2 text-xs font-bold';
                     row.innerHTML = `
-                        <span class="text-slate-800">${idx + 1}. ${s.nama} (${s.nisn})</span>
+                        <span class="text-slate-800">${idx + 1}. ${s.nama} <span class="text-slate-400 font-normal">(${s.nisn || '-'})</span></span>
                         <div class="flex items-center gap-2.5">
                             <label class="cursor-pointer font-black text-amber-700"><input type="radio" name="ket_${idx}" value="S" onchange="updatePresensiCount()" class="mr-1">S</label>
                             <label class="cursor-pointer font-black text-blue-700"><input type="radio" name="ket_${idx}" value="I" onchange="updatePresensiCount()" class="mr-1">I</label>
@@ -613,7 +592,11 @@
                     `;
                     container.appendChild(row);
                 });
-            } catch (err) { container.innerHTML = `<p class="text-xs text-red-500 font-bold">Error: ${err.message}</p>`; }
+                updatePresensiCount();
+            } catch (err) { 
+                console.error("Gagal muat siswa:", err);
+                container.innerHTML = `<p class="text-xs text-red-500 font-bold text-center py-4">Error Koneksi DB Siswa: ${err.message}</p>`; 
+            }
         }
 
         function clearRadio(name) {
@@ -840,8 +823,8 @@
                 initJamGrid();
                 document.getElementById('imagePreviewContainer').classList.add('hidden');
                 
-                // Re-trigger mapel sesudah reset form
-                muatMapelGuruAktif(currentUserSession.username);
+                // Re-trigger identitas & mapel
+                initIdentitasGuru();
                 switchTab('liveFeedTab');
             } catch (err) {
                 alert("Gagal menyimpan jurnal: " + err.message);
