@@ -1,9 +1,9 @@
-// KONFIGURASI API GATEWAY CLOUDFLARE WORKER (AMAN - BEBAS KREDENSIAL DB)
+// KONFIGURASI API GATEWAY CLOUDFLARE WORKER (REPOSITORI JURNAL MENGAJAR)
 const API_WORKER_URL = "https://smada-api-gateway.yhanedy.workers.dev/api/query";
 
 /**
  * Fungsi pembantu eksekusi SQL kueri ke Turso via Cloudflare Worker Proxy
- * @param {string} sql - Perintah SQL (SELECT, INSERT, UPDATE, DELETE)
+ * @param {string} sql - Perintah SQL
  * @param {Array} params - Parameter array untuk query
  */
 async function queryTurso(sql, params = []) {
@@ -21,7 +21,7 @@ async function queryTurso(sql, params = []) {
 
         if (!response.ok) {
             const errJson = await response.json().catch(() => ({}));
-            throw new Error(errJson.error || `Server Error (${response.status}): ${response.statusText}`);
+            throw new Error(errJson.error || `Server Error (${response.status})`);
         }
 
         return await response.json();
