@@ -27,7 +27,7 @@
             <div id="statusIcon" class="text-3xl text-blue-900">
                 <i class="fa-solid fa-spinner fa-spin"></i>
             </div>
-            <p id="statusMessage" class="text-xs font-black text-slate-700">Memeriksa Akses SSO...</p>
+            <p id="statusMessage" class="text-xs font-black text-slate-700">Memeriksa Sesi SSO...</p>
         </div>
 
         <!-- TOMBOL KE PORTAL SSO UTAMA -->
@@ -65,7 +65,7 @@
                     
                     // Cek Batas Kadaluwarsa Token (Maksimal 60 detik sejak diterbitkan)
                     if (decodedData.t && (Date.now() - decodedData.t > 60000)) {
-                        throw new Error("Token SSO sudah kadaluwarsa.");
+                        throw new Error("Token SSO telah kadaluwarsa.");
                     }
 
                     // Format data user resmi
@@ -86,7 +86,7 @@
 
                     setTimeout(() => {
                         arahkanKeTujuan(userObj);
-                    }, 500);
+                    }, 400);
                     return;
 
                 } catch (e) {
@@ -106,7 +106,7 @@
 
                         setTimeout(() => {
                             arahkanKeTujuan(user);
-                        }, 500);
+                        }, 400);
                         return;
                     }
                 } catch (e) {
