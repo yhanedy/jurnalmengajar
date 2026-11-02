@@ -9,14 +9,13 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Konfigurasi Turso DB Engine / Cloudflare Worker -->
-    <script src="js/config.js?v=20261102_final"></script>
+    <script src="js/config.js?v=20261102_jurnal_final"></script>
 
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-        /* FLOATING SIDEBAR LEFT */
         .floating-sidebar {
             width: 56px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -44,7 +43,7 @@
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col justify-between">
 
-    <!-- VERIFIKASI SESI SSO SECURED & TIME-BOUND CHECK -->
+    <!-- VERIFIKASI SESI SSO SECURED -->
     <script>
         let currentUserSession = null;
         const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/index.html";
@@ -53,14 +52,12 @@
             const urlParams = new URLSearchParams(window.location.search);
             const ssoToken = urlParams.get('sso_token');
 
-            // 1. JIKA PEMANGGILAN MEMBAWA TOKEN SSO BARU
             if (ssoToken) {
                 try {
                     const decodedUser = JSON.parse(atob(decodeURIComponent(ssoToken)));
                     
-                    // Keamanan: Validasi batas waktu token (maksimal 60 detik)
                     if (decodedUser.t && (Date.now() - decodedUser.t > 60000)) {
-                        alert("Token SSO telah kadaluwarsa. Silakan login kembali dari Portal Presensi.");
+                        alert("Token SSO telah kadaluwarsa. Silakan login kembali.");
                         window.location.replace(PORTAL_SSO_URL);
                         return;
                     }
@@ -73,8 +70,6 @@
 
                     localStorage.setItem('smada_user', JSON.stringify(formattedUser));
                     currentUserSession = formattedUser;
-                    
-                    // Bersihkan parameter sso_token dari URL untuk keamanan histori browser
                     window.history.replaceState({}, document.title, window.location.pathname);
                     return;
                 } catch (e) {
@@ -82,7 +77,6 @@
                 }
             }
 
-            // 2. CEK SESI TERSIMPAN
             const rawUser = localStorage.getItem('smada_user');
             if (rawUser && rawUser !== "null" && rawUser !== "undefined") {
                 try {
@@ -93,13 +87,12 @@
                 }
             }
 
-            // 3. JIKA DITOLAK -> REDIRECT KE PORTAL SSO
-            alert("Akses Terbatas! Silakan login melalui Portal SSO Presensi.");
+            alert("Akses Terbatas! Silakan login melalui Portal SSO.");
             window.location.replace(PORTAL_SSO_URL);
         })();
     </script>
 
-    <!-- HEADER NAVIGATION TOP -->
+    <!-- HEADER TOP -->
     <header class="bg-blue-950 text-white shadow-md sticky top-0 z-40 px-3 py-2.5 flex items-center justify-between border-b-4 border-yellow-400">
         <div class="flex items-center gap-2 pl-12 sm:pl-16">
             <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" 
@@ -112,13 +105,11 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <!-- TOMBOL PANTAU KBM -->
             <button onclick="switchTab('liveFeedTab')" title="Pantau KBM Hari Ini" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-2.5 py-2 rounded-xl transition shadow flex items-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-tower-broadcast text-yellow-300 animate-pulse"></i>
                 <span class="hidden sm:inline">Pantau KBM</span>
             </button>
 
-            <!-- PROFIL & KELUAR -->
             <div class="text-right hidden md:block">
                 <span id="display-nama-guru" class="font-bold text-yellow-300 block text-xs">Memuat...</span>
             </div>
@@ -182,7 +173,6 @@
         <section id="jurnalTab" class="tab-content block space-y-4">
             <div class="bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-4 sm:p-6 space-y-4">
                 
-                <!-- DISPLAY TANGGAL BESAR + KALENDER -->
                 <div class="bg-gradient-to-r from-blue-950 to-indigo-900 text-white p-4 rounded-2xl shadow flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div class="space-y-0.5">
                         <span class="text-[10px] font-black uppercase text-yellow-300 tracking-wider">Tanggal & Hari Pelaporan KBM</span>
@@ -198,7 +188,6 @@
 
                 <form id="formJurnal" onsubmit="handleFormSubmit(event)" class="space-y-4">
                     
-                    <!-- KONTINER PROFIL GURU (TERKUNCI SSO) & MAPEL / KELAS -->
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div id="containerNamaGuruBox" class="bg-slate-100 p-3 rounded-xl border-2 border-slate-300 relative">
                             <label class="block text-[11px] font-black uppercase text-slate-600 mb-1 flex items-center justify-between">
@@ -208,7 +197,6 @@
                                     <span>Rekap PDF</span>
                                 </button>
                             </label>
-                            <!-- Nama Guru Terkunci Otomatis dari SSO -->
                             <input type="text" id="namaGuru" readonly required class="w-full px-3 py-2 border-2 border-slate-300 rounded-lg bg-slate-200 font-black text-slate-800 text-xs sm:text-sm cursor-not-allowed">
                         </div>
 
@@ -305,12 +293,10 @@
         <section id="liveFeedTab" class="tab-content hidden space-y-4">
             <div class="bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-4 sm:p-6 space-y-3">
                 <div class="flex justify-between items-center border-b pb-3">
-                    <div>
-                        <h2 class="text-base sm:text-lg font-black text-blue-950 flex items-center gap-2">
-                            <i class="fa-solid fa-tower-broadcast text-emerald-500 animate-pulse"></i>
-                            <span>PANTAU KBM HARI INI</span>
-                        </h2>
-                    </div>
+                    <h2 class="text-base sm:text-lg font-black text-blue-950 flex items-center gap-2">
+                        <i class="fa-solid fa-tower-broadcast text-emerald-500 animate-pulse"></i>
+                        <span>PANTAU KBM HARI INI</span>
+                    </h2>
                     <button onclick="muatLiveFeedGrid()" class="bg-blue-950 hover:bg-blue-900 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow cursor-pointer">
                         <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh
                     </button>
@@ -360,7 +346,6 @@
                     </button>
                 </div>
 
-                <!-- AREA TABEL CETAK -->
                 <div id="areaCetakPdf" class="border p-4 rounded-xl bg-white space-y-3 text-xs hidden">
                     <div class="text-center border-b pb-2">
                         <h4 class="font-black text-sm uppercase">REKAPITULASI JURNAL MENGAJAR GURU</h4>
@@ -446,7 +431,6 @@
             window.location.replace(PORTAL_SSO_URL);
         }
 
-        /* 1. KUNCI IDENTITAS GURU DARI SSO LOGIN */
         async function initIdentitasGuru() {
             if (!currentUserSession) return;
 
@@ -467,7 +451,6 @@
             await muatMapelGuruAktif(currentUserSession.username);
         }
 
-        /* 2. MUAT MAPEL HANYA PADA KOLOM MAPEL DARI TURSO DB */
         async function muatMapelGuruAktif(usernameGuru) {
             if (!usernameGuru) return;
             try {
@@ -520,125 +503,80 @@
             }
         }
 
-       /* PULL DAFTAR KELAS DINAMIS DARI TABEL SISWA TURSO DB */
-/* PULL DAFTAR KELAS RESMI LANGSUNG DARI TABEL SISWA TURSO DB */
-async function muatDaftarKelasTurso() {
-    const selectKelas = document.getElementById('pilihanKelas');
-    if (!selectKelas) return;
+        /* MEMUAT DAFTAR KELAS DINAMIS DARI TABEL SISWA */
+        async function muatDaftarKelasTurso() {
+            const selectKelas = document.getElementById('pilihanKelas');
+            if (!selectKelas) return;
 
-    selectKelas.innerHTML = '<option value="">-- MEMUAT KELAS... --</option>';
+            selectKelas.innerHTML = '<option value="">-- MEMUAT KELAS... --</option>';
 
-    try {
-        // Hanya tarik dari tabel siswa dan buang record kosong/null
-        const dataKelas = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != "" ORDER BY kelas ASC');
+            try {
+                const dataKelas = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != "" ORDER BY kelas ASC');
 
-        if (dataKelas && Array.isArray(dataKelas) && dataKelas.length > 0) {
-            let optionsHTML = '<option value="">-- PILIH KELAS --</option>';
-            dataKelas.forEach(item => {
-                const kClean = String(item.kelas || '').trim();
-                if (kClean) {
-                    optionsHTML += `<option value="${kClean}">${kClean}</option>`;
+                if (dataKelas && Array.isArray(dataKelas) && dataKelas.length > 0) {
+                    let optionsHTML = '<option value="">-- PILIH KELAS --</option>';
+                    dataKelas.forEach(item => {
+                        const kClean = String(item.kelas || '').trim();
+                        if (kClean) {
+                            optionsHTML += `<option value="${kClean}">${kClean}</option>`;
+                        }
+                    });
+                    selectKelas.innerHTML = optionsHTML;
+                } else {
+                    selectKelas.innerHTML = '<option value="">-- DATA KELAS KOSONG --</option>';
                 }
-            });
-            selectKelas.innerHTML = optionsHTML;
-        } else {
-            selectKelas.innerHTML = '<option value="">-- KELAS KOSONG DI DATABASE --</option>';
-        }
-    } catch (err) {
-        console.error("Gagal muat data kelas:", err);
-        selectKelas.innerHTML = `<option value="">-- GAGAL MEMUAT KELAS (${err.message}) --</option>`;
-    }
-}
-
-/* PULL DAFTAR SISWA SESUAI NAMA KELAS YANG DIPILIH */
-async function loadSiswaByKelasTurso() {
-    const kelasVal = document.getElementById('pilihanKelas').value;
-    const container = document.getElementById('siswaListContainer');
-    container.innerHTML = '';
-
-    if (!kelasVal) {
-        container.innerHTML = '<p class="text-xs font-bold text-slate-400 italic py-4 text-center">Silakan pilih Kelas terlebih dahulu.</p>';
-        return;
-    }
-
-    container.innerHTML = '<p class="text-xs font-bold text-blue-600 italic py-4 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data siswa...</p>';
-
-    try {
-        // Menggunakan LOWER & REPLACE spasi agar pencarian 'XII F8' / 'XIIF8' selalu cocok
-        const dataSiswa = await queryTurso(
-            'SELECT nisn, nama, kelas FROM siswa WHERE LOWER(REPLACE(kelas, " ", "")) = LOWER(REPLACE(?, " ", "")) ORDER BY nama ASC', 
-            [kelasVal]
-        );
-
-        if (!dataSiswa || dataSiswa.length === 0) {
-            container.innerHTML = `<p class="text-xs font-bold text-slate-500 italic py-4 text-center">Tidak ada data siswa terdaftar untuk kelas "${kelasVal}" di Database.</p>`;
-            return;
+            } catch (err) {
+                console.error("Gagal muat data kelas:", err);
+                selectKelas.innerHTML = `<option value="">-- GAGAL MEMUAT KELAS (${err.message}) --</option>`;
+            }
         }
 
-        container.innerHTML = '';
-        dataSiswa.forEach((s, idx) => {
-            const row = document.createElement('div');
-            row.className = 'flex items-center justify-between py-2 text-xs font-bold border-b border-slate-100';
-            row.innerHTML = `
-                <span class="text-slate-800">${idx + 1}. ${s.nama} <span class="text-slate-400 font-normal">(${s.nisn || '-'})</span></span>
-                <div class="flex items-center gap-2.5">
-                    <label class="cursor-pointer font-black text-amber-700"><input type="radio" name="ket_${idx}" value="S" onchange="updatePresensiCount()" class="mr-1">S</label>
-                    <label class="cursor-pointer font-black text-blue-700"><input type="radio" name="ket_${idx}" value="I" onchange="updatePresensiCount()" class="mr-1">I</label>
-                    <label class="cursor-pointer font-black text-red-700"><input type="radio" name="ket_${idx}" value="A" onchange="updatePresensiCount()" class="mr-1">A</label>
-                    <button type="button" onclick="clearRadio('ket_${idx}')" class="text-slate-300 hover:text-slate-600 ml-1 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-            `;
-            container.appendChild(row);
-        });
-        updatePresensiCount();
-    } catch (err) { 
-        console.error("Gagal muat siswa:", err);
-        container.innerHTML = `<p class="text-xs text-red-500 font-bold text-center py-4">Error DB: ${err.message}</p>`; 
-    }
-}
+        /* MEMUAT DAFTAR SISWA FLEKSIBEL NAMA KELAS */
+        async function loadSiswaByKelasTurso() {
+            const kelasVal = document.getElementById('pilihanKelas').value;
+            const container = document.getElementById('siswaListContainer');
+            container.innerHTML = '';
 
-/* PULL DAFTAR SISWA DINAMIS DARI TABEL SISWA TURSO DB */
-async function loadSiswaByKelasTurso() {
-    const kelasVal = document.getElementById('pilihanKelas').value;
-    const container = document.getElementById('siswaListContainer');
-    container.innerHTML = '';
+            if (!kelasVal) {
+                container.innerHTML = '<p class="text-xs font-bold text-slate-400 italic py-4 text-center">Silakan pilih Kelas terlebih dahulu.</p>';
+                return;
+            }
 
-    if (!kelasVal) {
-        container.innerHTML = '<p class="text-xs font-bold text-slate-400 italic py-4 text-center">Silakan pilih Kelas terlebih dahulu.</p>';
-        return;
-    }
+            container.innerHTML = '<p class="text-xs font-bold text-blue-600 italic py-4 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data siswa...</p>';
 
-    container.innerHTML = '<p class="text-xs font-bold text-blue-600 italic py-4 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data siswa...</p>';
+            try {
+                // Kecocokan string tanpa memedulikan spasi (contoh: "XII F8" / "XIIF8")
+                const dataSiswa = await queryTurso(
+                    'SELECT nisn, nama, kelas FROM siswa WHERE LOWER(REPLACE(kelas, " ", "")) = LOWER(REPLACE(?, " ", "")) ORDER BY nama ASC', 
+                    [kelasVal]
+                );
 
-    try {
-        const dataSiswa = await queryTurso('SELECT nisn, nama FROM siswa WHERE UPPER(TRIM(kelas)) = UPPER(TRIM(?)) ORDER BY nama ASC', [kelasVal]);
+                if (!dataSiswa || dataSiswa.length === 0) {
+                    container.innerHTML = `<p class="text-xs font-bold text-slate-500 italic py-4 text-center">Tidak ada data siswa terdaftar untuk kelas "${kelasVal}" di Database.</p>`;
+                    return;
+                }
 
-        if (!dataSiswa || dataSiswa.length === 0) {
-            container.innerHTML = '<p class="text-xs font-bold text-slate-500 italic py-4 text-center">Tidak ada data siswa terdaftar untuk kelas ini di Database.</p>';
-            return;
+                container.innerHTML = '';
+                dataSiswa.forEach((s, idx) => {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center justify-between py-2 text-xs font-bold border-b border-slate-100';
+                    row.innerHTML = `
+                        <span class="text-slate-800">${idx + 1}. ${s.nama} <span class="text-slate-400 font-normal">(${s.nisn || '-'})</span></span>
+                        <div class="flex items-center gap-2.5">
+                            <label class="cursor-pointer font-black text-amber-700"><input type="radio" name="ket_${idx}" value="S" onchange="updatePresensiCount()" class="mr-1">S</label>
+                            <label class="cursor-pointer font-black text-blue-700"><input type="radio" name="ket_${idx}" value="I" onchange="updatePresensiCount()" class="mr-1">I</label>
+                            <label class="cursor-pointer font-black text-red-700"><input type="radio" name="ket_${idx}" value="A" onchange="updatePresensiCount()" class="mr-1">A</label>
+                            <button type="button" onclick="clearRadio('ket_${idx}')" class="text-slate-300 hover:text-slate-600 ml-1 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+                updatePresensiCount();
+            } catch (err) { 
+                console.error("Gagal muat siswa:", err);
+                container.innerHTML = `<p class="text-xs text-red-500 font-bold text-center py-4">Error DB: ${err.message}</p>`; 
+            }
         }
-
-        container.innerHTML = '';
-        dataSiswa.forEach((s, idx) => {
-            const row = document.createElement('div');
-            row.className = 'flex items-center justify-between py-2 text-xs font-bold';
-            row.innerHTML = `
-                <span class="text-slate-800">${idx + 1}. ${s.nama} <span class="text-slate-400 font-normal">(${s.nisn || '-'})</span></span>
-                <div class="flex items-center gap-2.5">
-                    <label class="cursor-pointer font-black text-amber-700"><input type="radio" name="ket_${idx}" value="S" onchange="updatePresensiCount()" class="mr-1">S</label>
-                    <label class="cursor-pointer font-black text-blue-700"><input type="radio" name="ket_${idx}" value="I" onchange="updatePresensiCount()" class="mr-1">I</label>
-                    <label class="cursor-pointer font-black text-red-700"><input type="radio" name="ket_${idx}" value="A" onchange="updatePresensiCount()" class="mr-1">A</label>
-                    <button type="button" onclick="clearRadio('ket_${idx}')" class="text-slate-300 hover:text-slate-600 ml-1 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-            `;
-            container.appendChild(row);
-        });
-        updatePresensiCount();
-    } catch (err) { 
-        console.error("Gagal muat siswa:", err);
-        container.innerHTML = `<p class="text-xs text-red-500 font-bold text-center py-4">Error Koneksi DB Siswa: ${err.message}</p>`; 
-    }
-}
 
         function clearRadio(name) {
             document.querySelectorAll(`input[name="${name}"]`).forEach(r => r.checked = false);
@@ -922,7 +860,6 @@ async function loadSiswaByKelasTurso() {
             }
         }
 
-        /* POP-UP REKAP PDF GURU */
         function bukaModalRekapPdf() {
             if (!currentUserSession) return;
             const namaGuru = document.getElementById('namaGuru').value || currentUserSession.nama || currentUserSession.username;
