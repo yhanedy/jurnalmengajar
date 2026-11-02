@@ -521,6 +521,7 @@
         }
 
        /* PULL DAFTAR KELAS DINAMIS DARI TABEL SISWA TURSO DB */
+/* PULL DAFTAR KELAS RESMI LANGSUNG DARI TABEL SISWA TURSO DB */
 async function muatDaftarKelasTurso() {
     const selectKelas = document.getElementById('pilihanKelas');
     if (!selectKelas) return;
@@ -528,41 +529,71 @@ async function muatDaftarKelasTurso() {
     selectKelas.innerHTML = '<option value="">-- MEMUAT KELAS... --</option>';
 
     try {
-        // Ambil kelas unik dari tabel siswa
-        let dataKelas = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != "" ORDER BY kelas ASC');
-        
-        // Fallback jika kueri pertama kosong
-        if (!dataKelas || dataKelas.length === 0) {
-            dataKelas = await queryTurso('SELECT DISTINCT kelas FROM kelas ORDER BY kelas ASC');
-        }
+        // Hanya tarik dari tabel siswa dan buang record kosong/null
+        const dataKelas = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != "" ORDER BY kelas ASC');
 
         if (dataKelas && Array.isArray(dataKelas) && dataKelas.length > 0) {
             let optionsHTML = '<option value="">-- PILIH KELAS --</option>';
             dataKelas.forEach(item => {
-                const namaKelas = item.kelas || item.nama_kelas;
-                if (namaKelas) {
-                    optionsHTML += `<option value="${namaKelas}">${namaKelas}</option>`;
+                const kClean = String(item.kelas || '').trim();
+                if (kClean) {
+                    optionsHTML += `<option value="${kClean}">${kClean}</option>`;
                 }
             });
             selectKelas.innerHTML = optionsHTML;
         } else {
-            // Fallback default jika database kelas benar-benar kosong
-            selectKelas.innerHTML = `
-                <option value="">-- PILIH KELAS --</option>
-                <option value="X-1">X-1</option><option value="X-2">X-2</option>
-                <option value="XI-1">XI-1</option><option value="XI-2">XI-2</option>
-                <option value="XII-1">XII-1</option><option value="XII-2">XII-2</option>
-            `;
+            selectKelas.innerHTML = '<option value="">-- KELAS KOSONG DI DATABASE --</option>';
         }
     } catch (err) {
-        console.error("Gagal koneksi data kelas dari Turso DB:", err);
-        // Jika kueri error/gagal, tampilkan daftar kelas standar agar jurnal tetap dapat digunakan
-        selectKelas.innerHTML = `
-            <option value="">-- PILIH KELAS (OFFLINE MODE) --</option>
-            <option value="X-1">X-1</option><option value="X-2">X-2</option><option value="X-3">X-3</option>
-            <option value="XI-1">XI-1</option><option value="XI-2">XI-2</option><option value="XI-3">XI-3</option>
-            <option value="XII-1">XII-1</option><option value="XII-2">XII-2</option><option value="XII-3">XII-3</option>
-        `;
+        console.error("Gagal muat data kelas:", err);
+        selectKelas.innerHTML = `<option value="">-- GAGAL MEMUAT KELAS (${err.message}) --</option>`;
+    }
+}
+
+/* PULL DAFTAR SISWA SESUAI NAMA KELAS YANG DIPILIH */
+async function loadSiswaByKelasTurso() {
+    const kelasVal = document.getElementById('pilihanKelas').value;
+    const container = document.getElementById('siswaListContainer');
+    container.innerHTML = '';
+
+    if (!kelasVal) {
+        container.innerHTML = '<p class="text-xs font-bold text-slate-400 italic py-4 text-center">Silakan pilih Kelas terlebih dahulu.</p>';
+        return;
+    }
+
+    container.innerHTML = '<p class="text-xs font-bold text-blue-600 italic py-4 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data siswa...</p>';
+
+    try {
+        // Menggunakan LOWER & REPLACE spasi agar pencarian 'XII F8' / 'XIIF8' selalu cocok
+        const dataSiswa = await queryTurso(
+            'SELECT nisn, nama, kelas FROM siswa WHERE LOWER(REPLACE(kelas, " ", "")) = LOWER(REPLACE(?, " ", "")) ORDER BY nama ASC', 
+            [kelasVal]
+        );
+
+        if (!dataSiswa || dataSiswa.length === 0) {
+            container.innerHTML = `<p class="text-xs font-bold text-slate-500 italic py-4 text-center">Tidak ada data siswa terdaftar untuk kelas "${kelasVal}" di Database.</p>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        dataSiswa.forEach((s, idx) => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between py-2 text-xs font-bold border-b border-slate-100';
+            row.innerHTML = `
+                <span class="text-slate-800">${idx + 1}. ${s.nama} <span class="text-slate-400 font-normal">(${s.nisn || '-'})</span></span>
+                <div class="flex items-center gap-2.5">
+                    <label class="cursor-pointer font-black text-amber-700"><input type="radio" name="ket_${idx}" value="S" onchange="updatePresensiCount()" class="mr-1">S</label>
+                    <label class="cursor-pointer font-black text-blue-700"><input type="radio" name="ket_${idx}" value="I" onchange="updatePresensiCount()" class="mr-1">I</label>
+                    <label class="cursor-pointer font-black text-red-700"><input type="radio" name="ket_${idx}" value="A" onchange="updatePresensiCount()" class="mr-1">A</label>
+                    <button type="button" onclick="clearRadio('ket_${idx}')" class="text-slate-300 hover:text-slate-600 ml-1 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+        updatePresensiCount();
+    } catch (err) { 
+        console.error("Gagal muat siswa:", err);
+        container.innerHTML = `<p class="text-xs text-red-500 font-bold text-center py-4">Error DB: ${err.message}</p>`; 
     }
 }
 
