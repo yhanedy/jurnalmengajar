@@ -8,8 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Konfigurasi Turso DB Engine / Cloudflare Worker -->
-    <script src="js/config.js?v=20261102_admin_jurnal_secured"></script>
+    <!-- Konfigurasi Turso DB Engine / Cloudflare Worker Proxy -->
+    <script src="js/config.js?v=20261102_admin_clean"></script>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col justify-between">
 
@@ -246,7 +246,6 @@
             window.location.replace(PORTAL_SSO_URL);
         }
 
-        // Sanitasi Karakter Khusus HTML Mencegah XSS Injection
         function escapeHtml(str) {
             if (!str) return '';
             return String(str)
@@ -295,7 +294,7 @@
             if (subId === 'admPlotting') muatAdminPlottingGuru();
         }
 
-        /* DETEKSI KELAS KOSONG / BELUM KBM */
+        /* DETEKSI KELAS KOSONG / BELUM KBM (KUERI CLEAN & SAFE) */
         async function muatDeteksiBelumKbm() {
             const container = document.getElementById('grid-status-kelas');
             const tglSelected = document.getElementById('filterTanggalKbm').value;
@@ -303,8 +302,8 @@
             container.innerHTML = '<p class="col-span-full text-xs text-slate-400 font-bold py-8 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat status KBM kelas...</p>';
 
             try {
-                // PERBAIKAN: Tarik kelas unik langsung dari tabel SISWA (bukan tabel kelas)
-                const kelasData = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != "" ORDER BY kelas ASC');
+                // Tarik unik nama kelas langsung dari tabel SISWA (Bebas error tanda kutip)
+                const kelasData = await queryTurso("SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != '' ORDER BY kelas ASC");
                 
                 const sqlJurnal = `SELECT * FROM jurnal_kbm WHERE date(created_at) = ?`;
                 const allRecordsToday = await queryTurso(sqlJurnal, [tglSelected]);
