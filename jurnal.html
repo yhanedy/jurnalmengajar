@@ -9,7 +9,7 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Konfigurasi Turso DB Engine / Cloudflare Worker -->
-    <script src="js/config.js?v=20261102_jurnal_sso_secured"></script>
+    <script src="js/config.js?v=20261102_final"></script>
 
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -446,7 +446,7 @@
             window.location.replace(PORTAL_SSO_URL);
         }
 
-        /* 1. KUNCI IDENTITAS GURU DARI SSO LOGIN (TIDAK BISA DIUBAH DAFTARNYA) */
+        /* 1. KUNCI IDENTITAS GURU DARI SSO LOGIN */
         async function initIdentitasGuru() {
             if (!currentUserSession) return;
 
@@ -455,22 +455,19 @@
             const pdfNama = document.getElementById('pdfNamaGuru');
             const r = String(currentUserSession.role || '').toLowerCase();
 
-            // Tampilkan tombol Admin Panel khusus Admin / Super Admin
             if (r.includes('admin') || r.includes('superadmin') || r.includes('super_admin')) {
                 document.getElementById('nav-btn-admin').classList.remove('hidden');
             }
 
-            // Kunci Nama Guru sesuai SSO
             const namaGuruSso = currentUserSession.nama || currentUserSession.username;
             inputNamaGuru.value = namaGuruSso;
             if (displayNama) displayNama.textContent = namaGuruSso;
             if (pdfNama) pdfNama.value = namaGuruSso;
 
-            // Muat Pilihan Mapel Guru Terdaftar
             await muatMapelGuruAktif(currentUserSession.username);
         }
 
-        /* 2. MUAT MAPEL HANYA PADA KOLOM MAPEL DARI TURSO DATABASE */
+        /* 2. MUAT MAPEL HANYA PADA KOLOM MAPEL DARI TURSO DB */
         async function muatMapelGuruAktif(usernameGuru) {
             if (!usernameGuru) return;
             try {
@@ -523,18 +520,19 @@
             }
         }
 
-        /* 3. KONEKSI PULL DATA KELAS LANGSUNG DARI TABEL TURSO DATABASE */
+        /* 3. PULL DAFTAR KELAS DINAMIS DARI TABEL SISWA TURSO DB */
         async function muatDaftarKelasTurso() {
             const selectKelas = document.getElementById('pilihanKelas');
             if (!selectKelas) return;
 
+            selectKelas.innerHTML = '<option value="">-- MEMUAT KELAS... --</option>';
+
             try {
-                // Kueri 1: Cek dari tabel kelas utama
-                let dataKelas = await queryTurso('SELECT DISTINCT kelas FROM kelas ORDER BY kelas ASC');
+                // Tarik unik nama kelas dari tabel siswa
+                let dataKelas = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != "" ORDER BY kelas ASC');
                 
-                // Kueri Fallback 2: Cek dari tabel siswa jika tabel kelas belum terisi
                 if (!dataKelas || dataKelas.length === 0) {
-                    dataKelas = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != "" ORDER BY kelas ASC');
+                    dataKelas = await queryTurso('SELECT DISTINCT kelas FROM kelas ORDER BY kelas ASC');
                 }
 
                 if (dataKelas && dataKelas.length > 0) {
@@ -555,7 +553,7 @@
             }
         }
 
-        /* 4. KONEKSI PULL DATA SISWA DARI TABEL TURSO DATABASE */
+        /* 4. PULL DAFTAR SISWA DINAMIS DARI TABEL SISWA TURSO DB */
         async function loadSiswaByKelasTurso() {
             const kelasVal = document.getElementById('pilihanKelas').value;
             const container = document.getElementById('siswaListContainer');
@@ -569,7 +567,6 @@
             container.innerHTML = '<p class="text-xs font-bold text-blue-600 italic py-4 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data siswa...</p>';
 
             try {
-                // Kueri langsung ke tabel siswa di Turso DB
                 const dataSiswa = await queryTurso('SELECT nisn, nama FROM siswa WHERE UPPER(TRIM(kelas)) = UPPER(TRIM(?)) ORDER BY nama ASC', [kelasVal]);
 
                 if (!dataSiswa || dataSiswa.length === 0) {
@@ -823,7 +820,6 @@
                 initJamGrid();
                 document.getElementById('imagePreviewContainer').classList.add('hidden');
                 
-                // Re-trigger identitas & mapel
                 initIdentitasGuru();
                 switchTab('liveFeedTab');
             } catch (err) {
