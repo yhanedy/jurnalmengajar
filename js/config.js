@@ -1,66 +1,32 @@
-// Konfigurasi Turso Engine Direct API (Menggunakan protokol HTTPS)
-const TURSO_DATABASE_URL = "https://smada-db-yhanedy.aws-ap-southeast-2.turso.io";
-const TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTM1MjMwMTMsImlkIjoiMDFhMTkyNzMtODIwMS03MGZkLWEzYjEtYmIwYTQ5NGU2YzQ5Iiwia2lkIjoieEFIcDc0WGZzOC1wbm56RVd5QjE3clJPamp4ZzBIZFhaQXRMM1BUWlZfdyIsInJpZCI6IjgyYWM0Yjk3LWMxYmYtNGEwYi04OTYxLTU5MTllMTE3N2FhNSJ9.YFPWSmlxck02zjnaTK6LFgFZdI68uJRVbbn1FfqB6InO-w3LJODhGR58XEkROb6Fko8KIqYgz_J7ozCdgZ0UDQ";
+// KONFIGURASI API GATEWAY CLOUDFLARE WORKER (AMAN - BEBAS KREDENSIAL DB)
+const API_WORKER_URL = "https://smada-api-gateway.yhanedy.workers.dev/api/query";
 
 /**
- * Fungsi pembantu eksekusi SQL kueri ke Turso Database via HTTP REST API
+ * Fungsi pembantu eksekusi SQL kueri ke Turso via Cloudflare Worker Proxy
  * @param {string} sql - Perintah SQL (SELECT, INSERT, UPDATE, DELETE)
  * @param {Array} params - Parameter array untuk query
  */
 async function queryTurso(sql, params = []) {
     try {
-        const cleanToken = TURSO_AUTH_TOKEN.trim().replace(/[\r\n\s]/g, '');
-        const response = await fetch(`${TURSO_DATABASE_URL}/v2/pipeline`, {
+        const response = await fetch(API_WORKER_URL, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${cleanToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                requests: [
-                    {
-                        type: "execute",
-                        stmt: {
-                            sql: sql,
-                            args: params.map(p => {
-                                if (p === null || p === undefined) return { type: "null" };
-                                if (typeof p === "number") return { type: "integer", value: String(p) };
-                                return { type: "text", value: String(p) };
-                            })
-                        }
-                    },
-                    { type: "close" }
-                ]
+                sql: sql,
+                args: params
             })
         });
 
         if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`Turso HTTP Error (${response.status}): ${errText}`);
+            const errJson = await response.json().catch(() => ({}));
+            throw new Error(errJson.error || `Server Error (${response.status}): ${response.statusText}`);
         }
 
-        const resJson = await response.json();
-        const result = resJson.results[0];
-
-        if (result.type === "error") {
-            throw new Error(result.error.message);
-        }
-
-        const responseExec = result.response.result;
-        if (!responseExec.cols || responseExec.cols.length === 0) {
-            return [];
-        }
-
-        const columns = responseExec.cols.map(c => c.name);
-        return responseExec.rows.map(row => {
-            const obj = {};
-            row.forEach((cell, idx) => {
-                obj[columns[idx]] = cell.value;
-            });
-            return obj;
-        });
+        return await response.json();
     } catch (err) {
-        console.error("Turso Query Error:", err);
+        console.error("Gagal terhubung ke API Backend Serverless:", err);
         throw err;
     }
 }
