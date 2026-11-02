@@ -27,7 +27,7 @@
             <div id="statusIcon" class="text-3xl text-blue-900">
                 <i class="fa-solid fa-spinner fa-spin"></i>
             </div>
-            <p id="statusMessage" class="text-xs font-black text-slate-700">Memeriksa Sesi SSO...</p>
+            <p id="statusMessage" class="text-xs font-black text-slate-700">Memeriksa Akses SSO...</p>
         </div>
 
         <!-- TOMBOL KE PORTAL SSO UTAMA -->
@@ -43,7 +43,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT OTOMATIS GATEKEEPER SSO -->
+    <!-- SCRIPT OTOMATIS GATEKEEPER SSO SECURED -->
     <script>
         const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/index.html";
 
@@ -58,53 +58,76 @@
             const statusIcon = document.getElementById('statusIcon');
             const actionArea = document.getElementById('actionArea');
 
-            // 1. JIKA DIAKSES DARI KOTAK JURNAL PRESENSI DENGAN MEMBAWA TOKEN SSO
+            // 1. VERIFIKASI DARI TOKEN SSO AKTIF DARI PORTAL PRESENSI
             if (ssoToken) {
                 try {
                     const decodedData = JSON.parse(atob(decodeURIComponent(ssoToken)));
-                    localStorage.setItem('smada_user', JSON.stringify(decodedData));
                     
+                    // Cek Batas Kadaluwarsa Token (Maksimal 60 detik sejak diterbitkan)
+                    if (decodedData.t && (Date.now() - decodedData.t > 60000)) {
+                        throw new Error("Token SSO sudah kadaluwarsa.");
+                    }
+
+                    // Format data user resmi
+                    const userObj = {
+                        username: decodedData.u || decodedData.username,
+                        nama: decodedData.n || decodedData.nama,
+                        role: decodedData.r || decodedData.role
+                    };
+
+                    // Simpan ke sesi aplikasi
+                    localStorage.setItem('smada_user', JSON.stringify(userObj));
+                    
+                    // Hapus token dari baris URL browser (Keamanan Histori Browser)
+                    window.history.replaceState({}, document.title, window.location.pathname);
+
                     statusIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
-                    statusMessage.innerText = "Otentikasi Berhasil! Mengalihkan...";
+                    statusMessage.innerText = `Otentikasi Berhasil! Selamat Datang, ${userObj.nama || userObj.username}`;
 
                     setTimeout(() => {
-                        arahkanKeTujuan(decodedData);
-                    }, 400);
+                        arahkanKeTujuan(userObj);
+                    }, 500);
                     return;
+
                 } catch (e) {
-                    console.error("Format token SSO tidak valid:", e);
+                    console.warn("Token SSO tidak valid/kadaluwarsa:", e.message);
+                    localStorage.removeItem('smada_user');
                 }
             }
 
-            // 2. JIKA SUDAH PERNAH LOGIN SEBELUMNYA
+            // 2. CEK SESI TERSIMPAN DI BROWSER
             const rawUser = localStorage.getItem('smada_user');
             if (rawUser && rawUser !== "null" && rawUser !== "undefined") {
                 try {
                     const user = JSON.parse(rawUser);
-                    statusIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
-                    statusMessage.innerText = `Selamat Datang, ${user.nama || user.username}!`;
+                    if (user && user.username) {
+                        statusIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
+                        statusMessage.innerText = `Memuat Sesi: ${user.nama || user.username}...`;
 
-                    setTimeout(() => {
-                        arahkanKeTujuan(user);
-                    }, 400);
-                    return;
+                        setTimeout(() => {
+                            arahkanKeTujuan(user);
+                        }, 500);
+                        return;
+                    }
                 } catch (e) {
                     localStorage.removeItem('smada_user');
                 }
             }
 
-            // 3. JIKA BELUM LOGIN SAMA SEKALI -> LEMPAR KE PORTAL SSO PRESENSI
+            // 3. JIKA TIDAK ADA SESI SAH -> KEMBALIKAN KE PORTAL SSO UTAMA
             statusIcon.innerHTML = `<i class="fa-solid fa-lock text-amber-500"></i>`;
-            statusMessage.innerText = "Akses Terbatas! Silakan login melalui Portal SSO Presensi.";
+            statusMessage.innerText = "Akses Terbatas! Mengalihkan ke Portal SSO Presensi...";
             actionArea.classList.remove('hidden');
 
             setTimeout(() => {
                 window.location.replace(PORTAL_SSO_URL);
-            }, 1800);
+            }, 1200);
         }
 
         function arahkanKeTujuan(user) {
             const r = String(user.role || '').toLowerCase();
+            
+            // Pengalihan Berdasarkan Hak Akses
             if (r.includes('admin') || r.includes('superadmin') || r.includes('super_admin') || r.includes('jurnal')) {
                 window.location.replace('admin-jurnal.html');
             } else {
