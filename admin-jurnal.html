@@ -122,10 +122,10 @@
 
             <!-- SUB TABS NAVIGATION -->
             <div class="flex gap-2 text-xs font-bold border-b pb-2 overflow-x-auto">
-                <button onclick="switchSubTab('admBelumKbm')" id="btn-admBelumKbm" class="subtab-btn px-4 py-2.5 rounded-xl bg-blue-950 text-white font-black shadow-sm transition">
+                <button onclick="switchSubTab('admBelumKbm')" id="btn-admBelumKbm" class="subtab-btn px-4 py-2.5 rounded-xl bg-blue-950 text-white font-black shadow-sm transition cursor-pointer">
                     <i class="fa-solid fa-chalkboard-user mr-1.5 text-yellow-400"></i>1. Deteksi Kelas Kosong
                 </button>
-                <button onclick="switchSubTab('admPlotting')" id="btn-admPlotting" class="subtab-btn px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-black transition">
+                <button onclick="switchSubTab('admPlotting')" id="btn-admPlotting" class="subtab-btn px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-black transition cursor-pointer">
                     <i class="fa-solid fa-users-gear mr-1.5 text-blue-900"></i>2. Plotting Mapel Guru
                 </button>
             </div>
@@ -140,7 +140,7 @@
                             <i class="fa-solid fa-clock text-blue-900"></i>
                             <span>Pilih Jam Ke- (Klik Angka 1 - 10):</span>
                         </label>
-                        <button onclick="muatDeteksiBelumKbm()" class="bg-blue-950 hover:bg-blue-900 text-white px-3 py-1 text-[11px] rounded-lg font-black transition flex items-center gap-1 shadow">
+                        <button onclick="muatDeteksiBelumKbm()" class="bg-blue-950 hover:bg-blue-900 text-white px-3 py-1 text-[11px] rounded-lg font-black transition flex items-center gap-1 shadow cursor-pointer">
                             <i class="fa-solid fa-arrows-rotate text-yellow-300"></i> Refresh
                         </button>
                     </div>
@@ -295,52 +295,19 @@
             if (subId === 'admPlotting') muatAdminPlottingGuru();
         }
 
-      async function muatDeteksiBelumKbm() {
-    const container = document.getElementById('grid-status-kelas');
-    const tglSelected = document.getElementById('filterTanggalKbm').value;
+        /* DETEKSI KELAS KOSONG / BELUM KBM */
+        async function muatDeteksiBelumKbm() {
+            const container = document.getElementById('grid-status-kelas');
+            const tglSelected = document.getElementById('filterTanggalKbm').value;
 
-    container.innerHTML = '<p class="col-span-full text-xs text-slate-400 font-bold py-8 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat status KBM kelas...</p>';
+            container.innerHTML = '<p class="col-span-full text-xs text-slate-400 font-bold py-8 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat status KBM kelas...</p>';
 
-    try {
-        // PERBAIKAN: Tarik kelas unik langsung dari tabel SISWA (bukan tabel kelas)
-        const kelasData = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != "" ORDER BY kelas ASC');
-        
-        const sqlJurnal = `SELECT * FROM jurnal_kbm WHERE date(created_at) = ?`;
-        const allRecordsToday = await queryTurso(sqlJurnal, [tglSelected]);
-
-        globalJurnalRecords = (allRecordsToday || []).filter(j => {
-            const jamArr = String(j.jam_ke || '').split(',').map(s => s.trim());
-            return jamArr.includes(String(activeSelectedJam));
-        });
-
-        if (!kelasData || kelasData.length === 0) {
-            container.innerHTML = '<p class="col-span-full text-xs text-red-500 font-bold text-center">Data kelas tidak ditemukan di tabel siswa.</p>';
-            return;
-        }
-
-        container.innerHTML = kelasData.map(k => {
-            const namaKelasClean = String(k.kelas || '').trim();
-            const recordKbm = globalJurnalRecords.find(j => String(j.kelas).trim().toUpperCase() === namaKelasClean.toUpperCase());
-            const isTerisi = !!recordKbm;
-
-            return `
-                <div onclick="bukaModalDetailKelas('${escapeHtml(namaKelasClean)}', '${activeSelectedJam}', '${tglSelected}')" 
-                     class="p-3.5 rounded-2xl border-2 text-center transition cursor-pointer hover:scale-105 shadow-sm ${
-                        isTerisi 
-                        ? 'bg-gradient-to-br from-blue-950 to-indigo-900 border-blue-950 text-white hover:shadow-blue-900/30' 
-                        : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100'
-                     }">
-                    <span class="block font-black text-sm sm:text-base tracking-wide">${escapeHtml(namaKelasClean)}</span>
-                    <span class="block text-[11px] font-black uppercase mt-1 ${isTerisi ? 'text-yellow-300' : 'text-slate-400'}">
-                        ${isTerisi ? '<i class="fa-solid fa-circle-check"></i> Terisi' : 'KOSONG'}
-                    </span>
-                </div>
-            `;
-        }).join('');
-    } catch (err) { 
-        container.innerHTML = `<p class="col-span-full text-xs text-red-500 font-bold text-center">Error: ${escapeHtml(err.message)}</p>`; 
-    }
-}
+            try {
+                // PERBAIKAN: Tarik kelas unik langsung dari tabel SISWA (bukan tabel kelas)
+                const kelasData = await queryTurso('SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != "" ORDER BY kelas ASC');
+                
+                const sqlJurnal = `SELECT * FROM jurnal_kbm WHERE date(created_at) = ?`;
+                const allRecordsToday = await queryTurso(sqlJurnal, [tglSelected]);
 
                 // Filter presisi mencocokkan angka jam pelajaran
                 globalJurnalRecords = (allRecordsToday || []).filter(j => {
@@ -349,12 +316,12 @@
                 });
 
                 if (!kelasData || kelasData.length === 0) {
-                    container.innerHTML = '<p class="col-span-full text-xs text-red-500 font-bold text-center">Data kelas tidak ditemukan.</p>';
+                    container.innerHTML = '<p class="col-span-full text-xs text-red-500 font-bold text-center">Data kelas tidak ditemukan di tabel siswa.</p>';
                     return;
                 }
 
                 container.innerHTML = kelasData.map(k => {
-                    const namaKelasClean = String(k.kelas || k.nama_kelas || '').trim();
+                    const namaKelasClean = String(k.kelas || '').trim();
                     const recordKbm = globalJurnalRecords.find(j => String(j.kelas).trim().toUpperCase() === namaKelasClean.toUpperCase());
                     const isTerisi = !!recordKbm;
 
@@ -468,7 +435,6 @@
                             ${g.terakhir_akses ? `<i class="fa-solid fa-clock text-emerald-600 mr-1"></i> ${escapeHtml(g.terakhir_akses)}` : '-'}
                         </td>
                         <td class="p-3 text-center">
-                            <!-- Menggunakan Index Array Mencegah XSS Injection Pada Attributes -->
                             <button onclick="bukaModalEditMapelByIndex(${index})" 
                                     class="bg-blue-950 hover:bg-blue-900 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow transition flex items-center gap-1 mx-auto cursor-pointer">
                                 <i class="fa-solid fa-pen-to-square text-yellow-300"></i> Set Mapel
@@ -482,7 +448,6 @@
             }
         }
 
-        // Fungsi Membuka Modal Menggunakan Index Objek Aman dari XSS
         function bukaModalEditMapelByIndex(index) {
             const guru = globalGuruList[index];
             if (!guru) return;
@@ -517,7 +482,9 @@
                 alert("Plotting mapel guru berhasil diperbarui!");
                 tutupModalEditMapel();
                 muatAdminPlottingGuru();
-            } catch (err) { alert("Gagal update mapel: " + err.message); }
+            } catch (err) { 
+                alert("Gagal update mapel: " + err.message); 
+            }
         }
     </script>
 </body>
