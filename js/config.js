@@ -3,8 +3,6 @@
 // =========================================================================
 const API_WORKER_URL = "https://smada-api-gateway.yhanedy.workers.dev/api/query";
 
-// KUNCI RAHASIA: Harus SAMA PERSIS dengan API_SECRET_KEY di Cloudflare Worker
-const API_SECRET_KEY = "KunciRahasiaBaruSMADA2026!@#PanjangSekali"; 
 
 /**
  * Fungsi pembantu eksekusi SQL kueri ke Turso via Cloudflare Worker Proxy
@@ -20,7 +18,6 @@ async function queryTurso(sql, params = []) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_SECRET_KEY}` // <-- Mengirim Kunci Rahasia
             },
             body: JSON.stringify({
                 sql: sql,
