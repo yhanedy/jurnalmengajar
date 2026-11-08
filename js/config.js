@@ -1,8 +1,7 @@
 // =========================================================================
-// KONFIGURASI API GATEWAY CLOUDFLARE WORKER (VERSI AMAN + ANTI-HACK)
+// KONFIGURASI API GATEWAY CLOUDFLARE WORKER (VERSI FINAL)
 // =========================================================================
 const API_WORKER_URL = "https://smada-api-gateway.yhanedy.workers.dev/api/query";
-
 
 /**
  * Fungsi pembantu eksekusi SQL kueri ke Turso via Cloudflare Worker Proxy
@@ -10,6 +9,7 @@ const API_WORKER_URL = "https://smada-api-gateway.yhanedy.workers.dev/api/query"
  * @param {Array} params - Parameter array untuk query
  */
 async function queryTurso(sql, params = []) {
+    // Timeout 30 detik untuk mengantisipasi sinyal lemah
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); 
 
@@ -18,6 +18,7 @@ async function queryTurso(sql, params = []) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                // TIDAK ADA Authorization header di sini. Validasi dilakukan oleh Worker berdasarkan domain.
             },
             body: JSON.stringify({
                 sql: sql,
@@ -37,7 +38,9 @@ async function queryTurso(sql, params = []) {
         
     } catch (err) {
         clearTimeout(timeoutId);
+        console.error("Gagal terhubung ke API Backend:", err);
         
+        // Menerjemahkan error agar ramah pengguna
         if (err.name === 'AbortError') {
             throw new Error("Koneksi terputus (Timeout 30 Detik). Sinyal internet Anda terlalu lemah.");
         } 
