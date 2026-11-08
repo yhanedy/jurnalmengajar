@@ -4,16 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel Jurnal - SMAN 2 Karanganyar</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Konfigurasi Turso DB Engine / Cloudflare Worker Proxy -->
-    <script src="js/config.js?v=20261102_admin_clean"></script>
+    <script src="js/config.js?v=adminjurnal_v9"></script>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col justify-between">
 
-    <!-- VERIFIKASI SSO HAK AKSES ADMIN SECURED -->
+    <!-- VERIFIKASI SSO HAK AKSES ADMIN -->
     <script>
         let currentUserSession = null;
         const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/index.html";
@@ -22,44 +19,33 @@
             const urlParams = new URLSearchParams(window.location.search);
             const ssoToken = urlParams.get('sso_token');
 
-            // 1. DARI TOKEN SSO AKTIF
             if (ssoToken) {
                 try {
                     const decodedUser = JSON.parse(atob(decodeURIComponent(ssoToken)));
-                    
-                    // Keamanan: Validasi waktu kadaluwarsa token (Maksimal 60 detik)
                     if (decodedUser.t && (Date.now() - decodedUser.t > 60000)) {
-                        alert("Token SSO telah kadaluwarsa. Silakan login ulang dari Portal Presensi.");
+                        alert("Token SSO telah kadaluwarsa. Silakan login ulang.");
                         window.location.replace(PORTAL_SSO_URL);
                         return;
                     }
-
                     const formattedUser = {
                         username: decodedUser.u || decodedUser.username,
                         nama: decodedUser.n || decodedUser.nama,
                         role: decodedUser.r || decodedUser.role
                     };
-
                     localStorage.setItem('smada_user', JSON.stringify(formattedUser));
                     currentUserSession = formattedUser;
-                    
-                    // Bersihkan token dari URL browser
                     window.history.replaceState({}, document.title, window.location.pathname);
                 } catch (e) {
                     console.error("Token SSO Error:", e);
                 }
             }
 
-            // 2. CEK SESI TERSIMPAN & VALIDASI ROLE KHUSUS ADMIN / SUPERADMIN
             const rawUser = localStorage.getItem('smada_user');
             if (rawUser && rawUser !== "null" && rawUser !== "undefined") {
                 try {
                     currentUserSession = JSON.parse(rawUser);
                     const r = String(currentUserSession.role || '').toLowerCase().trim();
-                    
-                    // Ketat: Hanya izinkan role admin, superadmin, super_admin, atau jurnal_admin
                     const isAllowed = r === 'admin' || r === 'superadmin' || r === 'super_admin' || r === 'jurnal_admin' || r.includes('admin');
-
                     if (!currentUserSession.username || !isAllowed) {
                         alert("Akses Ditolak! Anda tidak memiliki otoritas Administrator Jurnal.");
                         window.location.replace('jurnal.html');
@@ -71,13 +57,11 @@
                 }
             }
 
-            // 3. JIKA SESI TIDAK SAH -> REDIRECT
             alert("Akses Terbatas! Silakan login melalui Portal SSO Presensi.");
             window.location.replace(PORTAL_SSO_URL);
         })();
     </script>
 
-    <!-- HEADER ADMIN (BIRU TUA & EMAS) -->
     <header class="bg-blue-950 text-white shadow-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between border-b-4 border-yellow-400">
         <div class="flex items-center gap-3">
             <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" 
@@ -88,7 +72,6 @@
                 <p class="text-xs text-yellow-300 font-bold">Control Panel Admin Jurnal KBM</p>
             </div>
         </div>
-
         <div class="flex items-center gap-2">
             <a href="jurnal.html" class="bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 border border-blue-700">
                 <i class="fa-solid fa-arrow-left text-yellow-300"></i>
@@ -100,19 +83,13 @@
         </div>
     </header>
 
-    <!-- KONTEN UTAMA -->
     <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow space-y-4">
-        
         <div class="bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-4 sm:p-6 space-y-4">
-            
-            <!-- HEADER BARU: NAMA MANAJEMEN + KALENDER HARI INI -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-slate-100 pb-4">
                 <h2 class="text-base sm:text-lg font-black text-blue-950 flex items-center gap-2">
                     <i class="fa-solid fa-user-shield text-blue-900 text-xl"></i>
                     <span>MANAJEMEN ADMINISTRATOR JURNAL</span>
                 </h2>
-
-                <!-- PICKER KALENDER INTERAKTIF -->
                 <div class="flex items-center gap-2 bg-blue-50 border-2 border-blue-200 px-3 py-1.5 rounded-xl shadow-sm">
                     <i class="fa-solid fa-calendar-days text-blue-900 text-sm"></i>
                     <span class="text-xs font-black text-blue-950 hidden sm:inline">Tanggal Data:</span>
@@ -120,7 +97,6 @@
                 </div>
             </div>
 
-            <!-- SUB TABS NAVIGATION -->
             <div class="flex gap-2 text-xs font-bold border-b pb-2 overflow-x-auto">
                 <button onclick="switchSubTab('admBelumKbm')" id="btn-admBelumKbm" class="subtab-btn px-4 py-2.5 rounded-xl bg-blue-950 text-white font-black shadow-sm transition cursor-pointer">
                     <i class="fa-solid fa-chalkboard-user mr-1.5 text-yellow-400"></i>1. Deteksi Kelas Kosong
@@ -130,10 +106,7 @@
                 </button>
             </div>
 
-            <!-- SUB-TAB 1: DETEKSI KELAS KOSONG -->
             <div id="admBelumKbm" class="admin-subcontent space-y-4">
-                
-                <!-- FILTER KOTAK-KOTAK JAM 1 - 10 -->
                 <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
                     <div class="flex justify-between items-center">
                         <label class="text-xs font-black uppercase text-blue-950 flex items-center gap-1.5">
@@ -144,16 +117,11 @@
                             <i class="fa-solid fa-arrows-rotate text-yellow-300"></i> Refresh
                         </button>
                     </div>
-
-                    <!-- GRID KOTAK JAM 1-10 -->
                     <div id="grid-filter-jam" class="grid grid-cols-5 sm:grid-cols-10 gap-2"></div>
                 </div>
-
-                <!-- GRID KARTU KELAS STATUS TERISI / KOSONG -->
                 <div id="grid-status-kelas" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"></div>
             </div>
 
-            <!-- SUB-TAB 2: PLOTTING MAPEL GURU -->
             <div id="admPlotting" class="admin-subcontent hidden space-y-3">
                 <div class="overflow-x-auto max-h-[500px] border-2 border-slate-200 rounded-xl shadow-inner">
                     <table class="w-full text-left text-xs text-slate-700">
@@ -170,12 +138,9 @@
                     </table>
                 </div>
             </div>
-
         </div>
-
     </main>
 
-    <!-- MODAL DETAIL KBM KELAS SAAT KARTU DIKLIK -->
     <div id="modalDetailKelasKbm" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border-2 border-blue-200 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b pb-3">
@@ -185,26 +150,19 @@
                 </div>
                 <button onclick="tutupModalDetailKelas()" class="text-slate-400 hover:text-red-600 font-black text-xl cursor-pointer">&times;</button>
             </div>
-
-            <div id="modalDetailKelasContent" class="space-y-3 text-xs">
-                <!-- Konten Detail KBM dimuat dinamis -->
-            </div>
-
+            <div id="modalDetailKelasContent" class="space-y-3 text-xs"></div>
             <div class="pt-2 border-t text-right">
                 <button onclick="tutupModalDetailKelas()" class="bg-blue-950 text-white font-black px-5 py-2 rounded-xl text-xs hover:bg-blue-900 transition cursor-pointer">Tutup</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL EDIT MAPEL GURU -->
     <div id="modalEditMapelGuru" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-sm w-full p-6 space-y-3 shadow-2xl border-2 border-blue-200">
             <h3 class="font-black text-slate-900 text-sm border-b pb-2">Set Multi-Mapel Guru</h3>
             <p id="edit-mapel-guru-nama" class="text-xs font-bold text-blue-900">-</p>
             <input type="hidden" id="edit-mapel-guru-username">
-
             <div id="container-checkbox-mapel" class="max-h-56 overflow-y-auto space-y-2 text-xs border-2 border-slate-200 p-3 rounded-2xl font-bold bg-slate-50"></div>
-
             <div class="flex gap-2 pt-2">
                 <button onclick="simpanPlottingMapelGuru()" class="w-1/2 bg-blue-950 hover:bg-blue-900 text-white font-black py-2.5 rounded-xl text-xs shadow transition cursor-pointer">Simpan</button>
                 <button onclick="tutupModalEditMapel()" class="w-1/2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black py-2.5 rounded-xl text-xs transition cursor-pointer">Batal</button>
@@ -212,12 +170,10 @@
         </div>
     </div>
 
-    <!-- FOOTER -->
     <footer class="bg-blue-950 text-slate-400 text-xs text-center py-3.5 border-t-2 border-yellow-400">
         <p>&copy; yhanedy@2026 SMAN 2 Karanganyar. All rights reserved.</p>
     </footer>
 
-    <!-- SCRIPT LOGIKA ADMIN SECURED -->
     <script>
         const PRESET_MAPEL_SMADA = [
             "Pendidikan Agama Islam", "Pendidikan Agama Kristen", "Pendidikan Agama Katolik", 
@@ -236,7 +192,6 @@
         window.onload = function() {
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('filterTanggalKbm').value = today;
-            
             initJamGridFilter();
             muatDeteksiBelumKbm();
         };
@@ -248,15 +203,9 @@
 
         function escapeHtml(str) {
             if (!str) return '';
-            return String(str)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        /* GENERATE KOTAK FILTER JAM 1 - 10 */
         function initJamGridFilter() {
             const container = document.getElementById('grid-filter-jam');
             container.innerHTML = '';
@@ -265,13 +214,9 @@
                 btn.type = 'button';
                 btn.innerText = i;
                 btn.id = `btn-jam-filter-${i}`;
-                
-                if (i === activeSelectedJam) {
-                    btn.className = "py-2 font-black rounded-xl text-xs sm:text-sm bg-blue-950 text-yellow-300 border-2 border-yellow-400 shadow-md transition cursor-pointer";
-                } else {
-                    btn.className = "py-2 font-black rounded-xl text-xs sm:text-sm bg-white text-slate-800 border-2 border-slate-300 hover:bg-yellow-100 transition cursor-pointer";
-                }
-                
+                btn.className = (i === activeSelectedJam) 
+                    ? "py-2 font-black rounded-xl text-xs sm:text-sm bg-blue-950 text-yellow-300 border-2 border-yellow-400 shadow-md transition cursor-pointer"
+                    : "py-2 font-black rounded-xl text-xs sm:text-sm bg-white text-slate-800 border-2 border-slate-300 hover:bg-yellow-100 transition cursor-pointer";
                 btn.onclick = () => pilihJamFilter(i);
                 container.appendChild(btn);
             }
@@ -286,50 +231,35 @@
         function switchSubTab(subId) {
             document.querySelectorAll('.admin-subcontent').forEach(s => s.classList.add('hidden'));
             document.getElementById(subId).classList.remove('hidden');
-
             document.querySelectorAll('.subtab-btn').forEach(b => b.className = "subtab-btn px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-black transition cursor-pointer");
             document.getElementById('btn-' + subId).className = "subtab-btn px-4 py-2.5 rounded-xl bg-blue-950 text-white font-black shadow-sm transition cursor-pointer";
-
             if (subId === 'admBelumKbm') muatDeteksiBelumKbm();
             if (subId === 'admPlotting') muatAdminPlottingGuru();
         }
 
-        /* DETEKSI KELAS KOSONG / BELUM KBM (KUERI CLEAN & SAFE) */
         async function muatDeteksiBelumKbm() {
             const container = document.getElementById('grid-status-kelas');
             const tglSelected = document.getElementById('filterTanggalKbm').value;
-
             container.innerHTML = '<p class="col-span-full text-xs text-slate-400 font-bold py-8 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat status KBM kelas...</p>';
-
             try {
-                // Tarik unik nama kelas langsung dari tabel SISWA (Bebas error tanda kutip)
                 const kelasData = await queryTurso("SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != '' ORDER BY kelas ASC");
-                
-                const sqlJurnal = `SELECT * FROM jurnal_kbm WHERE date(created_at) = ?`;
-                const allRecordsToday = await queryTurso(sqlJurnal, [tglSelected]);
-
-                // Filter presisi mencocokkan angka jam pelajaran
+                const allRecordsToday = await queryTurso(`SELECT * FROM jurnal_kbm WHERE date(created_at) = ?`, [tglSelected]);
                 globalJurnalRecords = (allRecordsToday || []).filter(j => {
                     const jamArr = String(j.jam_ke || '').split(',').map(s => s.trim());
                     return jamArr.includes(String(activeSelectedJam));
                 });
-
                 if (!kelasData || kelasData.length === 0) {
                     container.innerHTML = '<p class="col-span-full text-xs text-red-500 font-bold text-center">Data kelas tidak ditemukan di tabel siswa.</p>';
                     return;
                 }
-
                 container.innerHTML = kelasData.map(k => {
                     const namaKelasClean = String(k.kelas || '').trim();
                     const recordKbm = globalJurnalRecords.find(j => String(j.kelas).trim().toUpperCase() === namaKelasClean.toUpperCase());
                     const isTerisi = !!recordKbm;
-
                     return `
                         <div onclick="bukaModalDetailKelas('${escapeHtml(namaKelasClean)}', '${activeSelectedJam}', '${tglSelected}')" 
                              class="p-3.5 rounded-2xl border-2 text-center transition cursor-pointer hover:scale-105 shadow-sm ${
-                                isTerisi 
-                                ? 'bg-gradient-to-br from-blue-950 to-indigo-900 border-blue-950 text-white hover:shadow-blue-900/30' 
-                                : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100'
+                                isTerisi ? 'bg-gradient-to-br from-blue-950 to-indigo-900 border-blue-950 text-white hover:shadow-blue-900/30' : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100'
                              }">
                             <span class="block font-black text-sm sm:text-base tracking-wide">${escapeHtml(namaKelasClean)}</span>
                             <span class="block text-[11px] font-black uppercase mt-1 ${isTerisi ? 'text-yellow-300' : 'text-slate-400'}">
@@ -347,46 +277,23 @@
             if (!dateStr) return "-";
             const dateObj = new Date(dateStr);
             if (isNaN(dateObj.getTime())) return dateStr;
-            const opsiHari = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            return dateObj.toLocaleDateString('id-ID', opsiHari);
+            return dateObj.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
 
         function bukaModalDetailKelas(namaKelas, jamKe, tglStr) {
             const recordKbm = globalJurnalRecords.find(j => String(j.kelas).trim().toUpperCase() === String(namaKelas).trim().toUpperCase());
-            const judulModal = document.getElementById('modalDetailKelasJudul');
-            const subModal = document.getElementById('modalDetailKelasSub');
+            document.getElementById('modalDetailKelasJudul').innerText = `Jurnal KBM Kelas ${namaKelas}`;
+            document.getElementById('modalDetailKelasSub').innerText = `${formatTanggalIndo(tglStr)} | Jam Ke-${jamKe}`;
             const contentModal = document.getElementById('modalDetailKelasContent');
-
-            judulModal.innerText = `Jurnal KBM Kelas ${namaKelas}`;
-            subModal.innerText = `${formatTanggalIndo(tglStr)} | Jam Ke-${jamKe}`;
 
             if (recordKbm) {
                 contentModal.innerHTML = `
                     <div class="bg-blue-50 p-3 rounded-2xl border border-blue-200 space-y-2">
-                        <div>
-                            <span class="block text-[10px] font-black uppercase text-blue-900">Guru Pengampu</span>
-                            <span class="font-black text-slate-900 text-sm"><i class="fa-solid fa-user text-blue-950"></i> ${escapeHtml(recordKbm.nama_guru)}</span>
-                        </div>
-                        <div>
-                            <span class="block text-[10px] font-black uppercase text-blue-900">Mata Pelajaran</span>
-                            <span class="font-extrabold text-blue-950 text-xs">${escapeHtml(recordKbm.mapel)}</span>
-                        </div>
-                        <div>
-                            <span class="block text-[10px] font-black uppercase text-blue-900">Uraian Materi / Kegiatan</span>
-                            <p class="font-medium text-slate-700 text-xs bg-white p-2.5 rounded-xl border border-blue-100">${escapeHtml(recordKbm.materi)}</p>
-                        </div>
-                        <div>
-                            <span class="block text-[10px] font-black uppercase text-blue-900">Siswa Tidak Hadir</span>
-                            <span class="font-bold text-red-700 text-xs block bg-red-50 p-2 rounded-xl border border-red-200">${escapeHtml(recordKbm.absensi || 'Nihil (Hadir Semua)')}</span>
-                        </div>
-                        ${recordKbm.foto_url ? `
-                            <div class="pt-1">
-                                <span class="block text-[10px] font-black uppercase text-blue-900 mb-1">Foto Kegiatan KBM</span>
-                                <a href="${escapeHtml(recordKbm.foto_url)}" target="_blank" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition shadow">
-                                    <i class="fa-solid fa-image"></i> Lihat Foto Google Drive
-                                </a>
-                            </div>
-                        ` : '<span class="text-slate-400 font-semibold italic text-[11px]">Tanpa lampiran foto.</span>'}
+                        <div><span class="block text-[10px] font-black uppercase text-blue-900">Guru Pengampu</span><span class="font-black text-slate-900 text-sm"><i class="fa-solid fa-user text-blue-950"></i> ${escapeHtml(recordKbm.nama_guru)}</span></div>
+                        <div><span class="block text-[10px] font-black uppercase text-blue-900">Mata Pelajaran</span><span class="font-extrabold text-blue-950 text-xs">${escapeHtml(recordKbm.mapel)}</span></div>
+                        <div><span class="block text-[10px] font-black uppercase text-blue-900">Uraian Materi / Kegiatan</span><p class="font-medium text-slate-700 text-xs bg-white p-2.5 rounded-xl border border-blue-100">${escapeHtml(recordKbm.materi)}</p></div>
+                        <div><span class="block text-[10px] font-black uppercase text-blue-900">Siswa Tidak Hadir</span><span class="font-bold text-red-700 text-xs block bg-red-50 p-2 rounded-xl border border-red-200">${escapeHtml(recordKbm.absensi || 'Nihil (Hadir Semua)')}</span></div>
+                        ${recordKbm.foto_url ? `<div class="pt-1"><span class="block text-[10px] font-black uppercase text-blue-900 mb-1">Foto Kegiatan KBM</span><a href="${escapeHtml(recordKbm.foto_url)}" target="_blank" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition shadow"><i class="fa-solid fa-image"></i> Lihat Foto Google Drive</a></div>` : '<span class="text-slate-400 font-semibold italic text-[11px]">Tanpa lampiran foto.</span>'}
                     </div>
                 `;
             } else {
@@ -398,46 +305,29 @@
                     </div>
                 `;
             }
-
             document.getElementById('modalDetailKelasKbm').classList.remove('hidden');
         }
 
-        function tutupModalDetailKelas() {
-            document.getElementById('modalDetailKelasKbm').classList.add('hidden');
-        }
+        function tutupModalDetailKelas() { document.getElementById('modalDetailKelasKbm').classList.add('hidden'); }
 
         async function muatAdminPlottingGuru() {
             const tbody = document.getElementById('tabel-adm-plotting');
             tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data guru...</td></tr>';
-
             try {
-                const sqlGuru = `
-                    SELECT u.username, u.nama, u.mapel, MAX(j.created_at) as terakhir_akses
-                    FROM users u
-                    LEFT JOIN jurnal_kbm j ON u.username = j.username_guru
-                    GROUP BY u.username, u.nama, u.mapel
-                    ORDER BY u.nama ASC
-                `;
+                const sqlGuru = `SELECT u.username, u.nama, u.mapel, MAX(j.created_at) as terakhir_akses FROM users u LEFT JOIN jurnal_kbm j ON u.username = j.username_guru GROUP BY u.username, u.nama, u.mapel ORDER BY u.nama ASC`;
                 globalGuruList = await queryTurso(sqlGuru);
-
                 if (!globalGuruList || globalGuruList.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">Data guru tidak ditemukan.</td></tr>';
                     return;
                 }
-
                 tbody.innerHTML = globalGuruList.map((g, index) => `
                     <tr class="hover:bg-blue-50/50 border-b transition">
                         <td class="p-3 font-mono font-bold text-slate-700">${escapeHtml(g.username)}</td>
                         <td class="p-3 font-black text-slate-900">${escapeHtml(g.nama)}</td>
                         <td class="p-3 text-blue-950 font-extrabold">${g.mapel ? escapeHtml(g.mapel) : '<span class="text-slate-400 font-normal italic">Belum di-set</span>'}</td>
-                        <td class="p-3 text-center font-bold text-xs ${g.terakhir_akses ? 'text-emerald-700' : 'text-slate-400'}">
-                            ${g.terakhir_akses ? `<i class="fa-solid fa-clock text-emerald-600 mr-1"></i> ${escapeHtml(g.terakhir_akses)}` : '-'}
-                        </td>
+                        <td class="p-3 text-center font-bold text-xs ${g.terakhir_akses ? 'text-emerald-700' : 'text-slate-400'}">${g.terakhir_akses ? `<i class="fa-solid fa-clock text-emerald-600 mr-1"></i> ${escapeHtml(g.terakhir_akses)}` : '-'}</td>
                         <td class="p-3 text-center">
-                            <button onclick="bukaModalEditMapelByIndex(${index})" 
-                                    class="bg-blue-950 hover:bg-blue-900 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow transition flex items-center gap-1 mx-auto cursor-pointer">
-                                <i class="fa-solid fa-pen-to-square text-yellow-300"></i> Set Mapel
-                            </button>
+                            <button onclick="bukaModalEditMapelByIndex(${index})" class="bg-blue-950 hover:bg-blue-900 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow transition flex items-center gap-1 mx-auto cursor-pointer"><i class="fa-solid fa-pen-to-square text-yellow-300"></i> Set Mapel</button>
                         </td>
                     </tr>
                 `).join('');
@@ -450,32 +340,25 @@
         function bukaModalEditMapelByIndex(index) {
             const guru = globalGuruList[index];
             if (!guru) return;
-
             document.getElementById('edit-mapel-guru-username').value = guru.username;
             document.getElementById('edit-mapel-guru-nama').textContent = `${guru.nama} (${guru.username})`;
             const container = document.getElementById('container-checkbox-mapel');
-
             const activeMapelArr = (guru.mapel || '').split(',').map(m => m.trim());
-
             container.innerHTML = PRESET_MAPEL_SMADA.map(m => `
                 <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded-lg transition">
                     <input type="checkbox" value="${escapeHtml(m)}" ${activeMapelArr.includes(m) ? 'checked' : ''} class="cb-mapel-item rounded text-blue-900 w-4 h-4">
                     <span class="text-slate-800">${escapeHtml(m)}</span>
                 </label>
             `).join('');
-
             document.getElementById('modalEditMapelGuru').classList.remove('hidden');
         }
 
-        function tutupModalEditMapel() { 
-            document.getElementById('modalEditMapelGuru').classList.add('hidden'); 
-        }
+        function tutupModalEditMapel() { document.getElementById('modalEditMapelGuru').classList.add('hidden'); }
 
         async function simpanPlottingMapelGuru() {
             const username = document.getElementById('edit-mapel-guru-username').value;
             const checkedMapel = Array.from(document.querySelectorAll('.cb-mapel-item:checked')).map(cb => cb.value);
             const mapelStr = checkedMapel.join(', ');
-
             try {
                 await queryTurso('UPDATE users SET mapel = ? WHERE username = ?', [mapelStr, username]);
                 alert("Plotting mapel guru berhasil diperbarui!");
