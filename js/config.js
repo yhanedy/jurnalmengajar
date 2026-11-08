@@ -1,5 +1,10 @@
-// KONFIGURASI API GATEWAY CLOUDFLARE WORKER (REPOSITORI JURNAL MENGAJAR)
+// =========================================================================
+// KONFIGURASI API GATEWAY CLOUDFLARE WORKER (VERSI AMAN + ANTI-HACK)
+// =========================================================================
 const API_WORKER_URL = "https://smada-api-gateway.yhanedy.workers.dev/api/query";
+
+// KUNCI RAHASIA: Harus SAMA PERSIS dengan API_SECRET_KEY di Cloudflare Worker
+const API_SECRET_KEY = "SMADA_RAHASIA_2026_XYZ"; 
 
 /**
  * Fungsi pembantu eksekusi SQL kueri ke Turso via Cloudflare Worker Proxy
@@ -7,17 +12,24 @@ const API_WORKER_URL = "https://smada-api-gateway.yhanedy.workers.dev/api/query"
  * @param {Array} params - Parameter array untuk query
  */
 async function queryTurso(sql, params = []) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); 
+
     try {
         const response = await fetch(API_WORKER_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_SECRET_KEY}` // <-- Mengirim Kunci Rahasia
             },
             body: JSON.stringify({
                 sql: sql,
                 args: params
-            })
+            }),
+            signal: controller.signal 
         });
+
+        clearTimeout(timeoutId); 
 
         if (!response.ok) {
             const errJson = await response.json().catch(() => ({}));
@@ -25,8 +37,18 @@ async function queryTurso(sql, params = []) {
         }
 
         return await response.json();
+        
     } catch (err) {
-        console.error("Gagal terhubung ke API Backend Serverless:", err);
-        throw err;
+        clearTimeout(timeoutId);
+        
+        if (err.name === 'AbortError') {
+            throw new Error("Koneksi terputus (Timeout 30 Detik). Sinyal internet Anda terlalu lemah.");
+        } 
+        
+        if (err.message === 'Failed to fetch' || err.message.includes('NetworkError')) {
+            throw new Error("Gagal terhubung ke server. Pastikan internet Anda lancar atau WiFi sekolah tidak memblokir akses.");
+        }
+
+        throw err; 
     }
 }
