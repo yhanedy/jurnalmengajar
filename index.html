@@ -4,15 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gateway Jurnal KBM - SMAN 2 Karanganyar</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 min-h-screen flex items-center justify-center p-4 font-sans text-slate-800">
-
     <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center space-y-5 border-4 border-yellow-400">
-        <!-- LOGO & HEADER -->
         <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" 
              onError="this.onerror=null;this.src='https://placehold.co/100x100/003366/ffffff?text=SMADA'" 
              class="w-16 h-16 mx-auto object-contain drop-shadow" alt="Logo Sekolah">
@@ -22,7 +18,6 @@
             <p class="text-xs text-blue-900 font-bold bg-blue-100 py-1 px-3 rounded-full inline-block mt-1">Sistem Jurnal Mengajar Guru</p>
         </div>
 
-        <!-- STATUS OTENTIKASI -->
         <div id="statusBox" class="p-4 rounded-2xl bg-slate-50 border-2 border-slate-200 space-y-2">
             <div id="statusIcon" class="text-3xl text-blue-900">
                 <i class="fa-solid fa-spinner fa-spin"></i>
@@ -30,7 +25,6 @@
             <p id="statusMessage" class="text-xs font-black text-slate-700">Memeriksa Sesi SSO...</p>
         </div>
 
-        <!-- TOMBOL KE PORTAL SSO UTAMA -->
         <div id="actionArea" class="hidden space-y-2 pt-1">
             <a href="https://yhanedy.github.io/presensi-smandakra/index.html" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-black rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2 border-2 border-yellow-500 block">
                 <i class="fa-solid fa-right-to-bracket"></i>
@@ -43,7 +37,6 @@
         </div>
     </div>
 
-    <!-- SCRIPT OTOMATIS GATEKEEPER SSO SECURED -->
     <script>
         const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/index.html";
 
@@ -58,44 +51,29 @@
             const statusIcon = document.getElementById('statusIcon');
             const actionArea = document.getElementById('actionArea');
 
-            // 1. VERIFIKASI DARI TOKEN SSO AKTIF DARI PORTAL PRESENSI
             if (ssoToken) {
                 try {
                     const decodedData = JSON.parse(atob(decodeURIComponent(ssoToken)));
-                    
-                    // Cek Batas Kadaluwarsa Token (Maksimal 60 detik sejak diterbitkan)
                     if (decodedData.t && (Date.now() - decodedData.t > 60000)) {
                         throw new Error("Token SSO telah kadaluwarsa.");
                     }
-
-                    // Format data user resmi
                     const userObj = {
                         username: decodedData.u || decodedData.username,
                         nama: decodedData.n || decodedData.nama,
                         role: decodedData.r || decodedData.role
                     };
-
-                    // Simpan ke sesi aplikasi
                     localStorage.setItem('smada_user', JSON.stringify(userObj));
-                    
-                    // Hapus token dari baris URL browser (Keamanan Histori Browser)
                     window.history.replaceState({}, document.title, window.location.pathname);
-
                     statusIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
                     statusMessage.innerText = `Otentikasi Berhasil! Selamat Datang, ${userObj.nama || userObj.username}`;
-
-                    setTimeout(() => {
-                        arahkanKeTujuan(userObj);
-                    }, 400);
+                    setTimeout(() => { arahkanKeTujuan(userObj); }, 400);
                     return;
-
                 } catch (e) {
                     console.warn("Token SSO tidak valid/kadaluwarsa:", e.message);
                     localStorage.removeItem('smada_user');
                 }
             }
 
-            // 2. CEK SESI TERSIMPAN DI BROWSER
             const rawUser = localStorage.getItem('smada_user');
             if (rawUser && rawUser !== "null" && rawUser !== "undefined") {
                 try {
@@ -103,10 +81,7 @@
                     if (user && user.username) {
                         statusIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
                         statusMessage.innerText = `Memuat Sesi: ${user.nama || user.username}...`;
-
-                        setTimeout(() => {
-                            arahkanKeTujuan(user);
-                        }, 400);
+                        setTimeout(() => { arahkanKeTujuan(user); }, 400);
                         return;
                     }
                 } catch (e) {
@@ -114,20 +89,14 @@
                 }
             }
 
-            // 3. JIKA TIDAK ADA SESI SAH -> KEMBALIKAN KE PORTAL SSO UTAMA
             statusIcon.innerHTML = `<i class="fa-solid fa-lock text-amber-500"></i>`;
             statusMessage.innerText = "Akses Terbatas! Mengalihkan ke Portal SSO Presensi...";
             actionArea.classList.remove('hidden');
-
-            setTimeout(() => {
-                window.location.replace(PORTAL_SSO_URL);
-            }, 1200);
+            setTimeout(() => { window.location.replace(PORTAL_SSO_URL); }, 1200);
         }
 
         function arahkanKeTujuan(user) {
             const r = String(user.role || '').toLowerCase();
-            
-            // Pengalihan Berdasarkan Hak Akses
             if (r.includes('admin') || r.includes('superadmin') || r.includes('super_admin') || r.includes('jurnal')) {
                 window.location.replace('admin-jurnal.html');
             } else {
