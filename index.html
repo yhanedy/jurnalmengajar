@@ -12,26 +12,20 @@
         <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" 
              onError="this.onerror=null;this.src='https://placehold.co/100x100/003366/ffffff?text=SMADA'" 
              class="w-16 h-16 mx-auto object-contain drop-shadow" alt="Logo Sekolah">
-        
         <div>
             <h1 class="text-lg font-black text-slate-900 tracking-wide">SMAN 2 KARANGANYAR</h1>
             <p class="text-xs text-blue-900 font-bold bg-blue-100 py-1 px-3 rounded-full inline-block mt-1">Sistem Jurnal Mengajar Guru</p>
         </div>
-
         <div id="statusBox" class="p-4 rounded-2xl bg-slate-50 border-2 border-slate-200 space-y-2">
-            <div id="statusIcon" class="text-3xl text-blue-900">
-                <i class="fa-solid fa-spinner fa-spin"></i>
-            </div>
+            <div id="statusIcon" class="text-3xl text-blue-900"><i class="fa-solid fa-spinner fa-spin"></i></div>
             <p id="statusMessage" class="text-xs font-black text-slate-700">Memeriksa Sesi SSO...</p>
         </div>
-
         <div id="actionArea" class="hidden space-y-2 pt-1">
             <a href="https://yhanedy.github.io/presensi-smandakra/index.html" class="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-black rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2 border-2 border-yellow-500 block">
                 <i class="fa-solid fa-right-to-bracket"></i>
                 <span>LOGIN VIA PORTAL SSO PRESENSI</span>
             </a>
         </div>
-
         <div class="text-[10px] text-slate-400 font-bold pt-1">
             <p>&copy; yhanedy@2026 SMAN 2 Karanganyar.</p>
         </div>
@@ -40,9 +34,7 @@
     <script>
         const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/index.html";
 
-        window.onload = function() {
-            prosesOtentikasiSSO();
-        };
+        window.onload = function() { prosesOtentikasiSSO(); };
 
         function prosesOtentikasiSSO() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -54,13 +46,12 @@
             if (ssoToken) {
                 try {
                     const decodedData = JSON.parse(atob(decodeURIComponent(ssoToken)));
-                    if (decodedData.t && (Date.now() - decodedData.t > 60000)) {
-                        throw new Error("Token SSO telah kadaluwarsa.");
-                    }
+                    if (decodedData.t && (Date.now() - decodedData.t > 60000)) throw new Error("Token SSO telah kadaluwarsa.");
                     const userObj = {
                         username: decodedData.u || decodedData.username,
                         nama: decodedData.n || decodedData.nama,
-                        role: decodedData.r || decodedData.role
+                        role: decodedData.r || decodedData.role,
+                        token: decodedData.token || '' // <-- SIMPAN TOKEN
                     };
                     localStorage.setItem('smada_user', JSON.stringify(userObj));
                     window.history.replaceState({}, document.title, window.location.pathname);
@@ -84,9 +75,7 @@
                         setTimeout(() => { arahkanKeTujuan(user); }, 400);
                         return;
                     }
-                } catch (e) {
-                    localStorage.removeItem('smada_user');
-                }
+                } catch (e) { localStorage.removeItem('smada_user'); }
             }
 
             statusIcon.innerHTML = `<i class="fa-solid fa-lock text-amber-500"></i>`;
