@@ -6,11 +6,10 @@
     <title>Admin Panel Jurnal - SMAN 2 Karanganyar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="js/config.js?v=adminjurnal_v9"></script>
+    <script src="js/config.js?v=adminjurnal_v10"></script>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col justify-between">
 
-    <!-- VERIFIKASI SSO HAK AKSES ADMIN -->
     <script>
         let currentUserSession = null;
         const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/index.html";
@@ -30,14 +29,13 @@
                     const formattedUser = {
                         username: decodedUser.u || decodedUser.username,
                         nama: decodedUser.n || decodedUser.nama,
-                        role: decodedUser.r || decodedUser.role
+                        role: decodedUser.r || decodedUser.role,
+                        token: decodedUser.token || '' // <-- SIMPAN TOKEN
                     };
                     localStorage.setItem('smada_user', JSON.stringify(formattedUser));
                     currentUserSession = formattedUser;
                     window.history.replaceState({}, document.title, window.location.pathname);
-                } catch (e) {
-                    console.error("Token SSO Error:", e);
-                }
+                } catch (e) { console.error("Token SSO Error:", e); }
             }
 
             const rawUser = localStorage.getItem('smada_user');
@@ -52,9 +50,7 @@
                         return;
                     }
                     return;
-                } catch (e) {
-                    localStorage.removeItem('smada_user');
-                }
+                } catch (e) { localStorage.removeItem('smada_user'); }
             }
 
             alert("Akses Terbatas! Silakan login melalui Portal SSO Presensi.");
@@ -64,9 +60,7 @@
 
     <header class="bg-blue-950 text-white shadow-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between border-b-4 border-yellow-400">
         <div class="flex items-center gap-3">
-            <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" 
-                 onError="this.onerror=null;this.src='https://placehold.co/100x100/003366/ffffff?text=SMADA'" 
-                 class="w-9 h-9 object-contain drop-shadow" alt="Logo">
+            <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" class="w-9 h-9 object-contain drop-shadow" alt="Logo">
             <div>
                 <h1 class="font-black text-base sm:text-lg tracking-wide leading-tight">SMAN 2 KARANGANYAR</h1>
                 <p class="text-xs text-yellow-300 font-bold">Control Panel Admin Jurnal KBM</p>
