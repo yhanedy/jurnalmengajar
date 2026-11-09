@@ -6,21 +6,16 @@
     <title>Jurnal Mengajar - SMAN 2 Karanganyar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="js/config.js?v=jurnal_v9"></script>
+    <script src="js/config.js?v=jurnal_v10"></script>
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
-        @media print {
-            body * { visibility: hidden; }
-            #areaCetakPdf, #areaCetakPdf * { visibility: visible; }
-            #areaCetakPdf { position: absolute; left: 0; top: 0; width: 100%; }
-        }
+        @media print { body * { visibility: hidden; } #areaCetakPdf, #areaCetakPdf * { visibility: visible; } #areaCetakPdf { position: absolute; left: 0; top: 0; width: 100%; } }
     </style>
 </head>
 <body class="bg-slate-900 font-sans text-slate-100 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
 
-    <!-- VERIFIKASI SESI SSO (AMAN) -->
     <script>
         let currentUserSession = null;
         const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/index.html";
@@ -29,23 +24,20 @@
             const urlParams = new URLSearchParams(window.location.search);
             const ssoToken = urlParams.get('sso_token');
 
-            // Token di-decode, TAPI HANYA UNTUK MENGAMBIL DATA.
-            // Keamanan sesungguhnya ada di API Key saat memanggil database.
             if (ssoToken) {
                 try {
                     const decodedUser = JSON.parse(atob(decodeURIComponent(ssoToken)));
                     const formattedUser = {
                         username: decodedUser.u || decodedUser.username,
                         nama: decodedUser.n || decodedUser.nama,
-                        role: decodedUser.r || decodedUser.role
+                        role: decodedUser.r || decodedUser.role,
+                        token: decodedUser.token || '' // <-- SIMPAN TOKEN
                     };
                     localStorage.setItem('smada_user', JSON.stringify(formattedUser));
                     currentUserSession = formattedUser;
                     window.history.replaceState({}, document.title, window.location.pathname);
                     return;
-                } catch (e) {
-                    console.error("Token SSO Error:", e);
-                }
+                } catch (e) { console.error("Token SSO Error:", e); }
             }
 
             const rawUser = localStorage.getItem('smada_user');
@@ -53,9 +45,7 @@
                 try {
                     currentUserSession = JSON.parse(rawUser);
                     if (currentUserSession && currentUserSession.username) return;
-                } catch (e) {
-                    localStorage.removeItem('smada_user');
-                }
+                } catch (e) { localStorage.removeItem('smada_user'); }
             }
 
             alert("Akses Terbatas! Silakan login melalui Portal SSO.");
@@ -75,9 +65,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-right hidden sm:block">
                     <span id="display-nama-guru" class="font-semibold text-slate-200 block text-xs">Memuat...</span>
-                    <span class="text-[10px] text-emerald-400 font-mono flex items-center justify-end gap-1">
-                        <i class="fa-solid fa-circle text-[6px]"></i> Terkoneksi
-                    </span>
+                    <span class="text-[10px] text-emerald-400 font-mono flex items-center justify-end gap-1"><i class="fa-solid fa-circle text-[6px]"></i> Terkoneksi</span>
                 </div>
                 <button onclick="logoutJurnal()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold p-2.5 rounded-xl transition cursor-pointer">
                     <i class="fa-solid fa-power-off text-xs"></i>
@@ -107,7 +95,6 @@
     </header>
 
     <main class="px-3 sm:px-6 py-6 max-w-5xl mx-auto w-full flex-grow">
-        <!-- TAB 1: FORM JURNAL -->
         <section id="jurnalTab" class="tab-content block space-y-6">
             <div class="bg-slate-950 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
                 <div class="bg-gradient-to-r from-slate-900 to-indigo-950 border border-slate-800 p-4 rounded-2xl shadow-inner flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -121,7 +108,6 @@
                         <input type="date" id="inputTanggalKbm" onchange="updateDisplayTanggalForm()" class="bg-slate-950 text-indigo-300 font-mono font-semibold text-xs px-2 py-1 rounded-lg border border-slate-700 outline-none cursor-pointer">
                     </div>
                 </div>
-
                 <form id="formJurnal" onsubmit="handleFormSubmit(event)" class="space-y-5">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
@@ -144,18 +130,15 @@
                             </select>
                         </div>
                     </div>
-
                     <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 space-y-2">
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Pilih Jam Ke (Klik Angka):</label>
                         <div class="grid grid-cols-5 sm:grid-cols-10 gap-2" id="jamGrid"></div>
                         <input type="hidden" id="selectedJam" required>
                     </div>
-
                     <div class="space-y-1.5">
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Materi / Kegiatan KBM Hari Ini</label>
                         <textarea id="materi" rows="3" required placeholder="Tulis uraian materi singkat di sini..." class="w-full p-3.5 border border-slate-800 rounded-2xl bg-slate-900 focus:bg-slate-950 focus:border-indigo-500 text-xs sm:text-sm font-medium text-slate-200 outline-none transition"></textarea>
                     </div>
-
                     <div class="border border-slate-800 rounded-2xl p-4 bg-slate-900/60 space-y-3">
                         <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-2.5">
                             <div>
@@ -168,7 +151,6 @@
                             <p class="text-xs font-medium text-slate-500 italic py-4 text-center">Silakan pilih Kelas terlebih dahulu.</p>
                         </div>
                     </div>
-
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
                         <div class="text-center space-y-2">
                             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 text-left">Foto KBM (Kamera HP)</label>
@@ -180,7 +162,6 @@
                                 <img id="imagePreview" src="#" alt="Preview Foto" class="h-32 mx-auto rounded-xl border border-indigo-500/40 object-cover shadow">
                             </div>
                         </div>
-
                         <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between">
                             <div>
                                 <div class="flex items-center justify-between mb-1.5">
@@ -197,7 +178,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="flex flex-col sm:flex-row items-center gap-4 pt-2">
                         <button type="submit" id="btnSimpan" disabled class="w-full sm:flex-1 bg-slate-800 text-slate-500 cursor-not-allowed font-bold py-3.5 px-6 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-lg border border-slate-700">
                             <i class="fa-solid fa-floppy-disk"></i> <span>SIMPAN JURNAL KBM</span>
@@ -210,18 +190,11 @@
                 </form>
             </div>
         </section>
-
-        <!-- TAB 2: PANTAU KBM -->
         <section id="liveFeedTab" class="tab-content hidden space-y-4">
             <div class="bg-slate-950 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-800 pb-4">
-                    <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2.5">
-                        <i class="fa-solid fa-tower-broadcast text-emerald-400 animate-pulse"></i>
-                        <span>PANTAU KBM HARI INI</span>
-                    </h2>
-                    <button onclick="muatLiveFeedGrid()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition shadow cursor-pointer flex items-center gap-1.5">
-                        <i class="fa-solid fa-arrows-rotate"></i> Refresh
-                    </button>
+                    <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2.5"><i class="fa-solid fa-tower-broadcast text-emerald-400 animate-pulse"></i> <span>PANTAU KBM HARI INI</span></h2>
+                    <button onclick="muatLiveFeedGrid()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition shadow cursor-pointer flex items-center gap-1.5"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
                 </div>
                 <div id="container-live-feed-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-1">
                     <p class="col-span-full text-center text-slate-500 font-medium py-8">Memuat data live feed...</p>
@@ -230,39 +203,22 @@
         </section>
     </main>
 
-    <!-- MODAL REKAP PDF -->
     <div id="modalRekapPdf" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-slate-900 rounded-3xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-800 max-h-[90vh] overflow-y-auto text-slate-100">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                 <div>
-                    <h3 class="font-bold text-white text-base flex items-center gap-2">
-                        <i class="fa-solid fa-file-pdf text-emerald-400"></i>
-                        <span>Cetak Rekap Jurnal Mengajar Guru</span>
-                    </h3>
+                    <h3 class="font-bold text-white text-base flex items-center gap-2"><i class="fa-solid fa-file-pdf text-emerald-400"></i> <span>Cetak Rekap Jurnal Mengajar Guru</span></h3>
                     <p class="text-xs text-slate-400 font-medium">Laporan rekap KBM terverifikasi berdasarkan akun login aktif.</p>
                 </div>
                 <button onclick="tutupModalRekapPdf()" class="text-slate-400 hover:text-white font-bold text-2xl cursor-pointer">&times;</button>
             </div>
             <div class="space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-xs">
-                    <div>
-                        <label class="block font-semibold text-slate-400 mb-1">Nama Guru (Terkunci)</label>
-                        <input type="text" id="pdfNamaGuru" readonly class="w-full p-2.5 border border-slate-800 rounded-xl bg-slate-900 text-slate-300 font-semibold">
-                    </div>
-                    <div>
-                        <label class="block font-semibold text-slate-400 mb-1">Dari Tanggal</label>
-                        <input type="date" id="pdfTglMulai" class="w-full p-2.5 border border-slate-700 rounded-xl bg-slate-900 text-white font-semibold">
-                    </div>
-                    <div>
-                        <label class="block font-semibold text-slate-400 mb-1">Sampai Tanggal</label>
-                        <input type="date" id="pdfTglSelesai" class="w-full p-2.5 border border-slate-700 rounded-xl bg-slate-900 text-white font-semibold">
-                    </div>
+                    <div><label class="block font-semibold text-slate-400 mb-1">Nama Guru (Terkunci)</label><input type="text" id="pdfNamaGuru" readonly class="w-full p-2.5 border border-slate-800 rounded-xl bg-slate-900 text-slate-300 font-semibold"></div>
+                    <div><label class="block font-semibold text-slate-400 mb-1">Dari Tanggal</label><input type="date" id="pdfTglMulai" class="w-full p-2.5 border border-slate-700 rounded-xl bg-slate-900 text-white font-semibold"></div>
+                    <div><label class="block font-semibold text-slate-400 mb-1">Sampai Tanggal</label><input type="date" id="pdfTglSelesai" class="w-full p-2.5 border border-slate-700 rounded-xl bg-slate-900 text-white font-semibold"></div>
                 </div>
-                <div class="text-right">
-                    <button onclick="prosesGenerateRekapPdf()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5 ml-auto cursor-pointer">
-                        <i class="fa-solid fa-magnifying-glass"></i> Tampilkan Rekap
-                    </button>
-                </div>
+                <div class="text-right"><button onclick="prosesGenerateRekapPdf()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5 ml-auto cursor-pointer"><i class="fa-solid fa-magnifying-glass"></i> Tampilkan Rekap</button></div>
                 <div id="areaCetakPdf" class="border border-slate-300 p-5 rounded-2xl bg-white text-slate-800 space-y-4 text-xs hidden">
                     <div class="text-center border-b pb-3">
                         <h4 class="font-black text-sm uppercase text-slate-900">REKAPITULASI JURNAL MENGAJAR GURU</h4>
@@ -282,28 +238,19 @@
                         <tbody id="tabelRekapPdfBody" class="divide-y font-medium text-slate-800"></tbody>
                     </table>
                     <div class="flex justify-between items-end pt-6">
-                        <div class="text-[10px] text-slate-500 font-mono">
-                            <p>Dicetak pada: <span id="pdfPrintDate"></span></p>
-                        </div>
-                        <div class="text-center font-bold text-xs space-y-12">
-                            <p>Guru Mata Pelajaran,</p>
-                            <p id="pdfTtdNama" class="underline font-black text-slate-900"></p>
-                        </div>
+                        <div class="text-[10px] text-slate-500 font-mono"><p>Dicetak pada: <span id="pdfPrintDate"></span></p></div>
+                        <div class="text-center font-bold text-xs space-y-12"><p>Guru Mata Pelajaran,</p><p id="pdfTtdNama" class="underline font-black text-slate-900"></p></div>
                     </div>
                 </div>
             </div>
             <div class="pt-3 border-t border-slate-800 flex justify-between items-center">
-                <button onclick="window.print()" id="btnCetakAksi" disabled class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow flex items-center gap-1.5 disabled:opacity-40 cursor-pointer">
-                    <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
-                </button>
+                <button onclick="window.print()" id="btnCetakAksi" disabled class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"><i class="fa-solid fa-print"></i> Cetak / Simpan PDF</button>
                 <button onclick="tutupModalRekapPdf()" class="bg-slate-800 text-slate-300 font-semibold px-4 py-2.5 rounded-xl text-xs hover:bg-slate-700 transition cursor-pointer">Tutup</button>
             </div>
         </div>
     </div>
 
-    <footer class="bg-slate-950 text-slate-500 text-xs text-center py-4 border-t border-slate-900">
-        <p>&copy; yhanedy@2026 SMAN 2 Karanganyar. All rights reserved.</p>
-    </footer>
+    <footer class="bg-slate-950 text-slate-500 text-xs text-center py-4 border-t border-slate-900"><p>&copy; yhanedy@2026 SMAN 2 Karanganyar. All rights reserved.</p></footer>
 
     <script>
         const GAS_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbz4inApesetc3y14EJrgWUU-b_l9pKn8l0VVB6_mg2mJfjJS8XL4Gvjj45h29cvcggywA/exec";
@@ -343,16 +290,13 @@
             const displayNama = document.getElementById('display-nama-guru');
             const pdfNama = document.getElementById('pdfNamaGuru');
             const r = String(currentUserSession.role || '').toLowerCase();
-
             if (r.includes('admin') || r.includes('superadmin') || r.includes('super_admin')) {
                 document.getElementById('nav-btn-admin').classList.remove('hidden');
             }
-
             const namaGuruSso = currentUserSession.nama || currentUserSession.username;
             inputNamaGuru.value = namaGuruSso;
             if (displayNama) displayNama.textContent = namaGuruSso;
             if (pdfNama) pdfNama.value = namaGuruSso;
-
             await muatMapelGuruAktif(currentUserSession.username);
         }
 
