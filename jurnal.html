@@ -5,21 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jurnal Mengajar - SMAN 2 Karanganyar</title>
     <script src="https://cdn.tailwindcss.com"></script>
-     <script src="js/security-guard.js"></script> 
+    <script src="js/security-guard.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="js/config.js?v=jurnal_v10"></script>
+    <script src="js/config.js?v=jurnal_v11"></script>
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
-        @media print { body * { visibility: hidden; } #areaCetakPdf, #areaCetakPdf * { visibility: visible; } #areaCetakPdf { position: absolute; left: 0; top: 0; width: 100%; } }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
+        @media print {
+            body * { visibility: hidden; }
+            #areaCetakPdf, #areaCetakPdf * { visibility: visible; }
+            #areaCetakPdf { position: absolute; left: 0; top: 0; width: 100%; border: none !important; padding: 0 !important; }
+            img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
     </style>
 </head>
 <body class="bg-slate-900 font-sans text-slate-100 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
 
     <script>
         let currentUserSession = null;
-        const PORTAL_SSO_URL = "https://yhanedy.github.io/presensi-smandakra/index.html";
 
         (function verifikasiSSO() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -32,9 +36,10 @@
                         username: decodedUser.u || decodedUser.username,
                         nama: decodedUser.n || decodedUser.nama,
                         role: decodedUser.r || decodedUser.role,
-                        token: decodedUser.token || '' // <-- SIMPAN TOKEN
+                        token: decodedUser.token || ''
                     };
                     localStorage.setItem('smada_user', JSON.stringify(formattedUser));
+                    if (formattedUser.token) localStorage.setItem('smada_token', formattedUser.token);
                     currentUserSession = formattedUser;
                     window.history.replaceState({}, document.title, window.location.pathname);
                     return;
@@ -54,8 +59,8 @@
         })();
     </script>
 
-    <header class="bg-slate-950/80 backdrop-blur-md border-b border-slate-800 text-white sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <header class="bg-slate-950/90 backdrop-blur-md border-b border-slate-800 text-white sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
             <div class="flex items-center gap-3">
                 <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" class="w-9 h-9 object-contain filter drop-shadow-md" alt="Logo">
                 <div>
@@ -63,29 +68,41 @@
                     <p class="text-[10px] sm:text-xs text-indigo-400 font-medium">Jurnal Mengajar Guru</p>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
-                <div class="text-right hidden sm:block">
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div class="text-right hidden md:block">
                     <span id="display-nama-guru" class="font-semibold text-slate-200 block text-xs">Memuat...</span>
-                    <span class="text-[10px] text-emerald-400 font-mono flex items-center justify-end gap-1"><i class="fa-solid fa-circle text-[6px]"></i> Terkoneksi</span>
+                    <span id="display-role-guru" class="text-[10px] text-emerald-400 font-mono uppercase">GURU</span>
                 </div>
-                <button onclick="logoutJurnal()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold p-2.5 rounded-xl transition cursor-pointer">
+
+                <!-- Dropdown Switcher Lintas Role -->
+                <div class="relative" id="roleSwitcherWrapper">
+                    <button type="button" onclick="toggleRoleMenu()" class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 font-bold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-grid-2"></i>
+                        <span class="hidden sm:inline">Pindah Portal</span>
+                        <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                    </button>
+                    <div id="roleSwitcherDropdown" class="hidden absolute right-0 mt-2 w-52 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl py-1.5 z-50 text-xs"></div>
+                </div>
+
+                <button onclick="logoutJurnal()" title="Keluar" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold p-2.5 rounded-xl transition cursor-pointer">
                     <i class="fa-solid fa-power-off text-xs"></i>
                 </button>
             </div>
         </div>
+
         <nav class="bg-slate-900/90 border-t border-slate-800/80 px-4 py-2">
-            <div class="max-w-7xl mx-auto flex items-center justify-between sm:justify-start gap-2 overflow-x-auto no-scrollbar">
-                <button onclick="switchTab('jurnalTab')" id="nav-jurnalTab" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
+            <div class="max-w-7xl mx-auto flex items-center justify-between sm:justify-start gap-2 overflow-x-auto">
+                <button onclick="switchTab('jurnalTab')" id="nav-jurnalTab" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 whitespace-nowrap">
                     <i class="fa-solid fa-pen-to-square"></i> <span>Input Jurnal</span>
                 </button>
-                <button onclick="switchTab('liveFeedTab')" id="nav-liveFeedTab" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer">
+                <button onclick="switchTab('liveFeedTab')" id="nav-liveFeedTab" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer whitespace-nowrap">
                     <i class="fa-solid fa-tower-broadcast text-emerald-400"></i> <span>Pantau KBM</span>
                 </button>
-                <button onclick="bukaModalRekapPdf()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-emerald-400 hover:bg-emerald-500/10 transition cursor-pointer border border-emerald-500/20">
+                <button onclick="bukaModalRekapPdf()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-emerald-400 hover:bg-emerald-500/10 transition cursor-pointer border border-emerald-500/20 whitespace-nowrap">
                     <i class="fa-solid fa-file-pdf"></i> <span>Rekap PDF</span>
                 </button>
-                <a id="nav-btn-admin" href="admin-jurnal.html" class="hidden flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-amber-400 hover:bg-amber-500/10 transition border border-amber-500/20">
-                    <i class="fa-solid fa-user-shield"></i> <span>Admin Panel</span>
+                <a id="nav-btn-admin" href="admin-jurnal.html" class="hidden flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-amber-400 hover:bg-amber-500/10 transition border border-amber-500/20 whitespace-nowrap">
+                    <i class="fa-solid fa-user-shield"></i> <span>Admin Jurnal</span>
                 </a>
                 <div class="ml-auto hidden md:flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-[11px]">
                     <i id="headerGpsIcon" class="fa-solid fa-location-crosshairs text-amber-400 animate-spin"></i>
@@ -95,7 +112,21 @@
         </nav>
     </header>
 
-    <main class="px-3 sm:px-6 py-6 max-w-5xl mx-auto w-full flex-grow">
+    <main class="px-3 sm:px-6 py-6 max-w-5xl mx-auto w-full flex-grow space-y-4">
+        <!-- Info Guru Piket Hari Ini -->
+        <div class="bg-slate-950/90 border border-amber-500/30 rounded-2xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-lg">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <i class="fa-solid fa-user-check text-sm"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">Guru Piket Bertugas (<span id="labelHariPiket">-</span>)</span>
+                    <p id="displayGuruPiketHariIni" class="text-xs sm:text-sm font-bold text-slate-200">Memuat jadwal piket...</p>
+                </div>
+            </div>
+            <span class="text-[10px] font-mono text-slate-400 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800 self-start sm:self-auto">Pos Piket SMAN 2 Karanganyar</span>
+        </div>
+
         <section id="jurnalTab" class="tab-content block space-y-6">
             <div class="bg-slate-950 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
                 <div class="bg-gradient-to-r from-slate-900 to-indigo-950 border border-slate-800 p-4 rounded-2xl shadow-inner flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -106,9 +137,10 @@
                     <div class="flex items-center gap-2 bg-slate-900 border border-slate-700/80 px-3 py-1.5 rounded-xl self-start sm:self-auto">
                         <i class="fa-solid fa-calendar-day text-indigo-400 text-xs"></i>
                         <span class="text-xs font-medium text-slate-300 hidden sm:inline">Pilih Tanggal:</span>
-                        <input type="date" id="inputTanggalKbm" onchange="updateDisplayTanggalForm()" class="bg-slate-950 text-indigo-300 font-mono font-semibold text-xs px-2 py-1 rounded-lg border border-slate-700 outline-none cursor-pointer">
+                        <input type="date" id="inputTanggalKbm" onchange="onTanggalKbmChanged()" class="bg-slate-950 text-indigo-300 font-mono font-semibold text-xs px-2 py-1 rounded-lg border border-slate-700 outline-none cursor-pointer">
                     </div>
                 </div>
+
                 <form id="formJurnal" onsubmit="handleFormSubmit(event)" class="space-y-5">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
@@ -131,15 +163,21 @@
                             </select>
                         </div>
                     </div>
+
                     <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 space-y-2">
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Pilih Jam Ke (Klik Angka):</label>
-                        <div class="grid grid-cols-5 sm:grid-cols-10 gap-2" id="jamGrid"></div>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Pilih Jam Ke (Klik Kotak Jam):</label>
+                            <span id="infoRentangJamTerpilih" class="text-[11px] font-mono text-indigo-300 font-bold">Belum ada jam dipilih</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="jamGrid"></div>
                         <input type="hidden" id="selectedJam" required>
                     </div>
+
                     <div class="space-y-1.5">
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Materi / Kegiatan KBM Hari Ini</label>
                         <textarea id="materi" rows="3" required placeholder="Tulis uraian materi singkat di sini..." class="w-full p-3.5 border border-slate-800 rounded-2xl bg-slate-900 focus:bg-slate-950 focus:border-indigo-500 text-xs sm:text-sm font-medium text-slate-200 outline-none transition"></textarea>
                     </div>
+
                     <div class="border border-slate-800 rounded-2xl p-4 bg-slate-900/60 space-y-3">
                         <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-2.5">
                             <div>
@@ -152,6 +190,7 @@
                             <p class="text-xs font-medium text-slate-500 italic py-4 text-center">Silakan pilih Kelas terlebih dahulu.</p>
                         </div>
                     </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
                         <div class="text-center space-y-2">
                             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 text-left">Foto KBM (Kamera HP)</label>
@@ -179,6 +218,7 @@
                             </div>
                         </div>
                     </div>
+
                     <div class="flex flex-col sm:flex-row items-center gap-4 pt-2">
                         <button type="submit" id="btnSimpan" disabled class="w-full sm:flex-1 bg-slate-800 text-slate-500 cursor-not-allowed font-bold py-3.5 px-6 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-lg border border-slate-700">
                             <i class="fa-solid fa-floppy-disk"></i> <span>SIMPAN JURNAL KBM</span>
@@ -191,10 +231,11 @@
                 </form>
             </div>
         </section>
+
         <section id="liveFeedTab" class="tab-content hidden space-y-4">
             <div class="bg-slate-950 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-800 pb-4">
-                    <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2.5"><i class="fa-solid fa-tower-broadcast text-emerald-400 animate-pulse"></i> <span>PANTAU KBM HARI INI</span></h2>
+                    <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2.5"><i class="fa-solid fa-tower-broadcast text-emerald-400 animate-pulse"></i> <span>PANTAU KBM TERBARU</span></h2>
                     <button onclick="muatLiveFeedGrid()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold text-xs px-3.5 py-2 rounded-xl transition shadow cursor-pointer flex items-center gap-1.5"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
                 </div>
                 <div id="container-live-feed-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-1">
@@ -204,12 +245,13 @@
         </section>
     </main>
 
+    <!-- Modal Rekap PDF -->
     <div id="modalRekapPdf" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 rounded-3xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-800 max-h-[90vh] overflow-y-auto text-slate-100">
+        <div class="bg-slate-900 rounded-3xl max-w-4xl w-full p-6 space-y-5 shadow-2xl border border-slate-800 max-h-[92vh] overflow-y-auto text-slate-100">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                 <div>
                     <h3 class="font-bold text-white text-base flex items-center gap-2"><i class="fa-solid fa-file-pdf text-emerald-400"></i> <span>Cetak Rekap Jurnal Mengajar Guru</span></h3>
-                    <p class="text-xs text-slate-400 font-medium">Laporan rekap KBM terverifikasi berdasarkan akun login aktif.</p>
+                    <p class="text-xs text-slate-400 font-medium">Laporan rekap KBM dilengkapi foto bukti kegiatan belajar mengajar.</p>
                 </div>
                 <button onclick="tutupModalRekapPdf()" class="text-slate-400 hover:text-white font-bold text-2xl cursor-pointer">&times;</button>
             </div>
@@ -221,19 +263,20 @@
                 </div>
                 <div class="text-right"><button onclick="prosesGenerateRekapPdf()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5 ml-auto cursor-pointer"><i class="fa-solid fa-magnifying-glass"></i> Tampilkan Rekap</button></div>
                 <div id="areaCetakPdf" class="border border-slate-300 p-5 rounded-2xl bg-white text-slate-800 space-y-4 text-xs hidden">
-                    <div class="text-center border-b pb-3">
+                    <div class="text-center border-b-2 border-slate-800 pb-3">
                         <h4 class="font-black text-sm uppercase text-slate-900">REKAPITULASI JURNAL MENGAJAR GURU</h4>
                         <p class="font-bold text-slate-700">SMAN 2 KARANGANYAR</p>
-                        <p id="pdfInfoGuru" class="text-[11px] text-slate-500 font-semibold mt-0.5"></p>
+                        <p id="pdfInfoGuru" class="text-[11px] text-slate-600 font-semibold mt-0.5"></p>
                     </div>
-                    <table class="w-full text-left border-collapse border border-slate-300">
+                    <table class="w-full text-left border-collapse border border-slate-400">
                         <thead class="bg-slate-100 font-bold text-slate-900">
                             <tr>
-                                <th class="border border-slate-300 p-2 text-center">No</th>
-                                <th class="border border-slate-300 p-2">Tanggal / Jam</th>
-                                <th class="border border-slate-300 p-2">Kelas & Mapel</th>
-                                <th class="border border-slate-300 p-2">Uraian Materi</th>
-                                <th class="border border-slate-300 p-2">Absensi Siswa</th>
+                                <th class="border border-slate-400 p-2 text-center w-8">No</th>
+                                <th class="border border-slate-400 p-2 w-28">Tanggal / Jam</th>
+                                <th class="border border-slate-400 p-2 w-32">Kelas & Mapel</th>
+                                <th class="border border-slate-400 p-2">Uraian Materi</th>
+                                <th class="border border-slate-400 p-2 w-32">Absensi Siswa</th>
+                                <th class="border border-slate-400 p-2 text-center w-28">Bukti Foto</th>
                             </tr>
                         </thead>
                         <tbody id="tabelRekapPdfBody" class="divide-y font-medium text-slate-800"></tbody>
@@ -255,33 +298,180 @@
 
     <script>
         const GAS_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbz4inApesetc3y14EJrgWUU-b_l9pKn8l0VVB6_mg2mJfjJS8XL4Gvjj45h29cvcggywA/exec";
-        const SCHOOL_LAT = -7.6005890; 
+        const SCHOOL_LAT = -7.6005890;
         const SCHOOL_LNG = 110.9783970;
         const MAX_RADIUS_METERS = 300;
 
         let userLat = null, userLng = null, isLocationValid = false;
         let selectedJamList = [], fotoBase64Data = null;
+        let masterJamPelajaran = {};
 
-        window.onload = function() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('inputTanggalKbm').value = today;
-            updateDisplayTanggalForm();
+        window.onload = async function() {
+            const todayWib = getTanggalWIB();
+            document.getElementById('inputTanggalKbm').value = todayWib;
+            renderRoleSwitcherMenu();
             initIdentitasGuru();
-            initJamGrid();
+            updateDisplayTanggalForm();
             getGeoLocation();
-            muatDaftarKelasTurso();
+
+            await Promise.all([
+                muatMasterJamPelajaran(),
+                muatGuruPiketHariIni(todayWib),
+                muatDaftarKelasTurso()
+            ]);
         };
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function normalizeKelas(val) {
+            return String(val || '').replace(/\s+/g, ' ').trim();
+        }
+
+        // =====================================================================
+        // NAVIGASI LINTAS ROLE (SSO SWITCHER)
+        // =====================================================================
+        function renderRoleSwitcherMenu() {
+            const container = document.getElementById('roleSwitcherDropdown');
+            if (!container || !currentUserSession) return;
+            const menus = getRoleMenuItems(currentUserSession);
+            container.innerHTML = menus.map(m => {
+                const href = m.external ? buildSsoTargetUrl(m.url, currentUserSession) : m.url;
+                return `
+                    <a href="${href}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-slate-200 hover:bg-indigo-600/20 hover:text-indigo-300 font-semibold transition">
+                        <i class="fa-solid ${m.icon} w-4 text-center text-indigo-400"></i>
+                        <span>${escapeHtml(m.label)}</span>
+                    </a>
+                `;
+            }).join('');
+        }
+
+        function toggleRoleMenu() {
+            const dd = document.getElementById('roleSwitcherDropdown');
+            if (dd) dd.classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('roleSwitcherWrapper');
+            const dd = document.getElementById('roleSwitcherDropdown');
+            if (wrapper && dd && !wrapper.contains(e.target)) {
+                dd.classList.add('hidden');
+            }
+        });
+
+        // =====================================================================
+        // TANGGAL, GURU PIKET HARI INI & MASTER JAM PELAJARAN
+        // =====================================================================
+        function onTanggalKbmChanged() {
+            updateDisplayTanggalForm();
+            const valDate = document.getElementById('inputTanggalKbm').value;
+            muatGuruPiketHariIni(valDate);
+        }
 
         function updateDisplayTanggalForm() {
             const valDate = document.getElementById('inputTanggalKbm').value;
             if (!valDate) return;
-            const dateObj = new Date(valDate);
+            const [y, m, d] = valDate.split('-').map(Number);
+            const dateObj = new Date(y, m - 1, d);
             const opsiHari = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('displayHariTanggalBesar').innerText = dateObj.toLocaleDateString('id-ID', opsiHari);
         }
 
+        async function muatGuruPiketHariIni(dateStr) {
+            const hari = getNamaHariIndo(dateStr);
+            const labelHari = document.getElementById('labelHariPiket');
+            const displayPiket = document.getElementById('displayGuruPiketHariIni');
+            if (labelHari) labelHari.textContent = hari;
+            if (!displayPiket) return;
+
+            try {
+                const rows = await queryTurso('SELECT nama_piket FROM jadwal_piket WHERE LOWER(TRIM(hari)) = LOWER(?) LIMIT 1', [hari]);
+                if (rows && rows.length > 0 && rows[0].nama_piket && rows[0].nama_piket.trim() !== '') {
+                    const daftarPiket = rows[0].nama_piket
+                        .split(/\r?\n|,/)
+                        .map(s => s.trim())
+                        .filter(Boolean);
+                    displayPiket.innerHTML = daftarPiket.map(nama =>
+                        `<span class="inline-block bg-amber-500/10 border border-amber-500/30 text-amber-200 px-2.5 py-0.5 rounded-lg text-xs mr-1.5 mb-1">${escapeHtml(nama)}</span>`
+                    ).join('');
+                } else {
+                    displayPiket.innerHTML = `<span class="text-slate-400 font-normal italic text-xs">Jadwal piket hari ${escapeHtml(hari)} belum diatur Admin.</span>`;
+                }
+            } catch (_) {
+                displayPiket.innerHTML = `<span class="text-slate-400 font-normal italic text-xs">Jadwal piket hari ${escapeHtml(hari)} belum tersedia.</span>`;
+            }
+        }
+
+        async function muatMasterJamPelajaran() {
+            try {
+                const rows = await queryTurso('SELECT jam_ke, jam_mulai, jam_selesai FROM jam_pelajaran ORDER BY jam_ke ASC', []);
+                masterJamPelajaran = {};
+                (rows || []).forEach(r => {
+                    masterJamPelajaran[Number(r.jam_ke)] = {
+                        mulai: String(r.jam_mulai || '').trim(),
+                        selesai: String(r.jam_selesai || '').trim()
+                    };
+                });
+            } catch (_) {
+                masterJamPelajaran = {};
+            }
+            initJamGrid();
+        }
+
+        function formatRentangJam(jamList) {
+            if (!jamList || jamList.length === 0) return 'Belum ada jam dipilih';
+            const sorted = [...jamList].sort((a, b) => a - b);
+            const first = masterJamPelajaran[sorted[0]];
+            const last = masterJamPelajaran[sorted[sorted.length - 1]];
+            const labelJam = `Jam ke-${sorted.join(', ')}`;
+            if (first && last && first.mulai && last.selesai) {
+                return `${labelJam} (${first.mulai} - ${last.selesai} WIB)`;
+            }
+            return labelJam;
+        }
+
+        function initJamGrid() {
+            const container = document.getElementById('jamGrid');
+            container.innerHTML = '';
+            for (let i = 1; i <= 10; i++) {
+                const slot = masterJamPelajaran[i];
+                const waktuSub = slot && slot.mulai && slot.selesai ? `${slot.mulai} - ${slot.selesai}` : 'Belum diset';
+                const isSelected = selectedJamList.includes(i);
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = isSelected
+                    ? 'jam-btn border border-indigo-400 bg-indigo-600 rounded-xl py-2 px-2 text-white shadow-md transition cursor-pointer flex flex-col items-center justify-center'
+                    : 'jam-btn border border-slate-800 bg-slate-950 rounded-xl py-2 px-2 text-slate-300 shadow-sm hover:border-indigo-500 transition cursor-pointer flex flex-col items-center justify-center';
+                btn.innerHTML = `
+                    <span class="font-black text-xs sm:text-sm leading-tight">Jam ${i}</span>
+                    <span class="font-mono text-[10px] ${isSelected ? 'text-indigo-100' : 'text-slate-400'} mt-0.5">${waktuSub}</span>
+                `;
+                btn.onclick = () => toggleSelectJam(i);
+                container.appendChild(btn);
+            }
+            document.getElementById('selectedJam').value = selectedJamList.join(',');
+            document.getElementById('infoRentangJamTerpilih').innerText = formatRentangJam(selectedJamList);
+        }
+
+        function toggleSelectJam(jam) {
+            if (selectedJamList.includes(jam)) {
+                selectedJamList = selectedJamList.filter(j => j !== jam);
+            } else {
+                selectedJamList.push(jam);
+                selectedJamList.sort((a, b) => a - b);
+            }
+            initJamGrid();
+        }
+
+        // =====================================================================
+        // IDENTITAS GURU, MAPEL & SISWA
+        // =====================================================================
         function logoutJurnal() {
             localStorage.removeItem('smada_user');
+            localStorage.removeItem('smada_token');
             window.location.replace(PORTAL_SSO_URL);
         }
 
@@ -289,15 +479,20 @@
             if (!currentUserSession) return;
             const inputNamaGuru = document.getElementById('namaGuru');
             const displayNama = document.getElementById('display-nama-guru');
+            const displayRole = document.getElementById('display-role-guru');
             const pdfNama = document.getElementById('pdfNamaGuru');
+
             const r = String(currentUserSession.role || '').toLowerCase();
-            if (r.includes('admin') || r.includes('superadmin') || r.includes('super_admin')) {
+            if (r.includes('admin') || r.includes('superadmin') || r.includes('super_admin') || r.includes('jurnal')) {
                 document.getElementById('nav-btn-admin').classList.remove('hidden');
             }
+
             const namaGuruSso = currentUserSession.nama || currentUserSession.username;
             inputNamaGuru.value = namaGuruSso;
             if (displayNama) displayNama.textContent = namaGuruSso;
+            if (displayRole) displayRole.textContent = String(currentUserSession.role || 'GURU').toUpperCase();
             if (pdfNama) pdfNama.value = namaGuruSso;
+
             await muatMapelGuruAktif(currentUserSession.username);
         }
 
@@ -310,8 +505,8 @@
                 } else {
                     prosesOpsiMapelDropdown("Umum / Lainnya");
                 }
-            } catch (err) { 
-                console.error("Gagal muat mapel guru:", err); 
+            } catch (err) {
+                console.error("Gagal muat mapel guru:", err);
                 prosesOpsiMapelDropdown("Umum / Lainnya");
             }
         }
@@ -327,15 +522,15 @@
             const mapelArr = mapelStr.split(',').map(m => m.trim()).filter(Boolean);
             if (mapelArr.length === 1) {
                 const mapelUtama = mapelArr[0];
-                selectMapel.innerHTML = `<option value="${mapelUtama}" selected>${mapelUtama}</option>`;
+                selectMapel.innerHTML = `<option value="${escapeHtml(mapelUtama)}" selected>${escapeHtml(mapelUtama)}</option>`;
                 selectMapel.disabled = false;
                 if (badgeStatus) { badgeStatus.textContent = 'Fix Mapel Terkunci'; badgeStatus.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'; }
             } else if (mapelArr.length > 1) {
                 selectMapel.disabled = false;
                 let optionsHTML = '<option value="">-- PILIH MAPEL --</option>';
-                mapelArr.forEach(m => { optionsHTML += `<option value="${m}">${m}</option>`; });
+                mapelArr.forEach(m => { optionsHTML += `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`; });
                 selectMapel.innerHTML = optionsHTML;
-                if (badgeStatus) { badgeStatus.textContent = 'Double Mapel (Pilih)'; badgeStatus.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'; }
+                if (badgeStatus) { badgeStatus.textContent = 'Multi Mapel (Pilih)'; badgeStatus.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'; }
             }
         }
 
@@ -344,25 +539,24 @@
             if (!selectKelas) return;
             selectKelas.innerHTML = '<option value="">-- MEMUAT KELAS... --</option>';
             try {
-                const dataKelas = await queryTurso("SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != '' ORDER BY kelas ASC");
-                if (dataKelas && Array.isArray(dataKelas) && dataKelas.length > 0) {
-                    let optionsHTML = '<option value="">-- PILIH KELAS --</option>';
-                    dataKelas.forEach(item => {
-                        const kClean = String(item.kelas || '').trim();
-                        if (kClean) optionsHTML += `<option value="${kClean}">${kClean}</option>`;
-                    });
-                    selectKelas.innerHTML = optionsHTML;
+                const dataKelas = await queryTurso("SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != '' ORDER BY kelas ASC", []);
+                const unikKelas = [...new Set((dataKelas || []).map(item => normalizeKelas(item.kelas)).filter(Boolean))]
+                    .sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+
+                if (unikKelas.length > 0) {
+                    selectKelas.innerHTML = '<option value="">-- PILIH KELAS --</option>' +
+                        unikKelas.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
                 } else {
                     selectKelas.innerHTML = '<option value="">-- KELAS KOSONG DI DATABASE --</option>';
                 }
             } catch (err) {
                 console.error("Gagal muat data kelas:", err);
-                selectKelas.innerHTML = `<option value="">-- GAGAL MEMUAT KELAS (${err.message}) --</option>`;
+                selectKelas.innerHTML = `<option value="">-- GAGAL MEMUAT KELAS --</option>`;
             }
         }
 
         async function loadSiswaByKelasTurso() {
-            const kelasVal = document.getElementById('pilihanKelas').value;
+            const kelasVal = normalizeKelas(document.getElementById('pilihanKelas').value);
             const container = document.getElementById('siswaListContainer');
             container.innerHTML = '';
             if (!kelasVal) {
@@ -371,9 +565,9 @@
             }
             container.innerHTML = '<p class="text-xs font-medium text-indigo-400 italic py-4 text-center"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Memuat data siswa...</p>';
             try {
-                const dataSiswa = await queryTurso("SELECT nisn, nama, kelas FROM siswa WHERE LOWER(TRIM(kelas)) = LOWER(TRIM(?)) ORDER BY nama ASC", [kelasVal]);
+                const dataSiswa = await queryTurso("SELECT nisn, nama, kelas FROM siswa WHERE LOWER(TRIM(kelas)) = LOWER(?) ORDER BY nama ASC", [kelasVal]);
                 if (!dataSiswa || dataSiswa.length === 0) {
-                    container.innerHTML = `<p class="text-xs font-medium text-slate-400 italic py-4 text-center">Tidak ada data siswa terdaftar untuk kelas "${kelasVal}".</p>`;
+                    container.innerHTML = `<p class="text-xs font-medium text-slate-400 italic py-4 text-center">Tidak ada data siswa terdaftar untuk kelas "${escapeHtml(kelasVal)}".</p>`;
                     return;
                 }
                 container.innerHTML = '';
@@ -381,7 +575,7 @@
                     const row = document.createElement('div');
                     row.className = 'flex items-center justify-between py-2.5 text-xs font-semibold border-b border-slate-800/60';
                     row.innerHTML = `
-                        <span class="text-slate-200">${idx + 1}. ${s.nama} <span class="text-slate-500 font-mono text-[11px]">(${s.nisn || '-'})</span></span>
+                        <span class="text-slate-200">${idx + 1}. ${escapeHtml(s.nama)} <span class="text-slate-500 font-mono text-[11px]">(${escapeHtml(s.nisn || '-')})</span></span>
                         <div class="flex items-center gap-3">
                             <label class="cursor-pointer font-bold text-amber-400"><input type="radio" name="ket_${idx}" value="S" onchange="updatePresensiCount()" class="mr-1">S</label>
                             <label class="cursor-pointer font-bold text-indigo-400"><input type="radio" name="ket_${idx}" value="I" onchange="updatePresensiCount()" class="mr-1">I</label>
@@ -392,9 +586,9 @@
                     container.appendChild(row);
                 });
                 updatePresensiCount();
-            } catch (err) { 
+            } catch (err) {
                 console.error("Gagal muat siswa:", err);
-                container.innerHTML = `<p class="text-xs text-rose-400 font-bold text-center py-4">Error DB: ${err.message}</p>`; 
+                container.innerHTML = `<p class="text-xs text-rose-400 font-bold text-center py-4">Error DB: ${escapeHtml(err.message)}</p>`;
             }
         }
 
@@ -412,42 +606,18 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
             document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.className = "nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer";
+                btn.className = "nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer whitespace-nowrap";
             });
             const activeNav = document.getElementById('nav-' + tabId);
             if (activeNav) {
-                activeNav.className = "nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer bg-indigo-600 text-white shadow-lg shadow-indigo-600/30";
+                activeNav.className = "nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 whitespace-nowrap";
             }
             if (tabId === 'liveFeedTab') muatLiveFeedGrid();
         }
 
-        function initJamGrid() {
-            const container = document.getElementById('jamGrid');
-            container.innerHTML = '';
-            for (let i = 1; i <= 10; i++) {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.innerText = i;
-                btn.className = `jam-btn border border-slate-800 bg-slate-950 rounded-xl py-2 font-bold text-slate-300 text-xs sm:text-sm shadow-sm hover:border-indigo-500 transition cursor-pointer`;
-                btn.onclick = () => toggleSelectJam(i, btn);
-                container.appendChild(btn);
-            }
-        }
-
-        function toggleSelectJam(jam, btnElement) {
-            if (selectedJamList.includes(jam)) {
-                selectedJamList = selectedJamList.filter(j => j !== jam);
-                btnElement.classList.remove('bg-indigo-600', 'border-indigo-500', 'text-white');
-                btnElement.classList.add('bg-slate-950', 'border-slate-800', 'text-slate-300');
-            } else {
-                selectedJamList.push(jam);
-                selectedJamList.sort((a, b) => a - b);
-                btnElement.classList.add('bg-indigo-600', 'border-indigo-500', 'text-white');
-                btnElement.classList.remove('bg-slate-950', 'border-slate-800', 'text-slate-300');
-            }
-            document.getElementById('selectedJam').value = selectedJamList.join(',');
-        }
-
+        // =====================================================================
+        // FOTO, GPS & SUBMIT JURNAL (WRITE KE TURSO)
+        // =====================================================================
         function previewImage(event) {
             const input = event.target;
             if (input.files && input.files[0]) {
@@ -478,10 +648,10 @@
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371e3;
-            const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
-            const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+            const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180, Δλ = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
         }
 
         function getGeoLocation() {
@@ -510,7 +680,7 @@
                     }
                     updateSubmitButton();
                 },
-                (err) => { statusBadge.innerText = "Gagal mengambil GPS."; updateSubmitButton(); },
+                () => { statusBadge.innerText = "Gagal mengambil GPS."; updateSubmitButton(); },
                 { enableHighAccuracy: true }
             );
         }
@@ -532,13 +702,23 @@
         async function uploadFotoKeGoogleDrive() {
             if (!fotoBase64Data) return "";
             try {
+                const cleanBase64 = fotoBase64Data.includes('base64,') ? fotoBase64Data.split('base64,')[1] : fotoBase64Data;
                 const response = await fetch(GAS_UPLOAD_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ image: fotoBase64Data, mimeType: "image/jpeg", fileName: `kbm_${currentUserSession.username}_${Date.now()}.jpg` })
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        base64: cleanBase64,
+                        image: fotoBase64Data,
+                        mimeType: "image/jpeg",
+                        fileName: `kbm_${currentUserSession.username}_${Date.now()}.jpg`
+                    })
                 });
                 const resJson = await response.json();
-                return resJson.status === 'success' ? resJson.url : "";
-            } catch (err) { console.error("Gagal upload Google Drive:", err); return ""; }
+                return (resJson.status === 'success' || resJson.success) ? (resJson.url || resJson.fileUrl || "") : "";
+            } catch (err) {
+                console.error("Gagal upload Google Drive:", err);
+                return "";
+            }
         }
 
         async function handleFormSubmit(e) {
@@ -551,24 +731,29 @@
                 const driveFotoUrl = await uploadFotoKeGoogleDrive();
                 const absensiStr = getAbsensiData();
                 const tglKbm = document.getElementById('inputTanggalKbm').value;
+                const jamWib = getJamWIB();
+
                 await queryTurso(
                     'INSERT INTO jurnal_kbm (username_guru, nama_guru, mapel, kelas, jam_ke, materi, absensi, foto_url, lokasi_gps, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                     [
                         currentUserSession.username,
                         document.getElementById('namaGuru').value,
                         document.getElementById('mapelSelect').value,
-                        document.getElementById('pilihanKelas').value,
+                        normalizeKelas(document.getElementById('pilihanKelas').value),
                         selectedJamList.join(', '),
-                        document.getElementById('materi').value,
+                        document.getElementById('materi').value.trim(),
                         absensiStr,
                         driveFotoUrl,
                         isLocationValid ? "Dalam Radius" : "Bypass GPS",
-                        `${tglKbm} 08:00:00`
+                        `${tglKbm} ${jamWib}`
                     ]
                 );
+
                 alert("Jurnal KBM Berhasil Disimpan!");
                 document.getElementById('formJurnal').reset();
+                document.getElementById('inputTanggalKbm').value = tglKbm;
                 selectedJamList = [];
+                fotoBase64Data = null;
                 initJamGrid();
                 document.getElementById('imagePreviewContainer').classList.add('hidden');
                 initIdentitasGuru();
@@ -593,34 +778,51 @@
             return results.length > 0 ? results.join(', ') : 'Nihil (Hadir Semua)';
         }
 
+        // =====================================================================
+        // LIVE FEED & REKAP PDF DENGAN FOTO BUKTI
+        // =====================================================================
+        function toPrintableDriveImageUrl(rawUrl) {
+            if (!rawUrl) return '';
+            const str = String(rawUrl).trim();
+            const matchId = str.match(/\/d\/([a-zA-Z0-9_-]+)/) || str.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+            if (matchId && matchId[1]) {
+                return `https://lh3.googleusercontent.com/d/${matchId[1]}=w300`;
+            }
+            return str;
+        }
+
         async function muatLiveFeedGrid() {
             const container = document.getElementById('container-live-feed-grid');
             container.innerHTML = '<p class="col-span-full text-center text-slate-500 font-medium py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Memuat data live feed...</p>';
             try {
-                const data = await queryTurso('SELECT * FROM jurnal_kbm ORDER BY id DESC LIMIT 20');
+                const data = await queryTurso('SELECT * FROM jurnal_kbm ORDER BY id DESC LIMIT 24', []);
                 if (!data || data.length === 0) {
-                    container.innerHTML = '<p class="col-span-full text-center text-slate-500 font-medium py-8">Belum ada pengisian jurnal KBM hari ini.</p>';
+                    container.innerHTML = '<p class="col-span-full text-center text-slate-500 font-medium py-8">Belum ada pengisian jurnal KBM.</p>';
                     return;
                 }
-                container.innerHTML = data.map(j => `
-                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-sm space-y-2 flex flex-col justify-between">
-                        <div class="space-y-1.5">
-                            <div class="flex items-center justify-between">
-                                <span class="bg-indigo-600 text-white font-bold px-2.5 py-0.5 rounded-lg text-[11px]">${j.kelas}</span>
-                                <span class="bg-slate-800 text-amber-400 font-mono font-bold px-2 py-0.5 rounded-lg text-[10px]">Jam ${j.jam_ke}</span>
+                container.innerHTML = data.map(j => {
+                    const jamArr = String(j.jam_ke || '').split(',').map(s => Number(s.trim())).filter(Boolean);
+                    const infoWaktu = formatRentangJam(jamArr);
+                    return `
+                        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-sm space-y-2 flex flex-col justify-between">
+                            <div class="space-y-1.5">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="bg-indigo-600 text-white font-bold px-2.5 py-0.5 rounded-lg text-[11px]">${escapeHtml(j.kelas)}</span>
+                                    <span class="bg-slate-800 text-amber-400 font-mono font-bold px-2 py-0.5 rounded-lg text-[10px]">${escapeHtml(infoWaktu)}</span>
+                                </div>
+                                <h4 class="font-bold text-white text-xs sm:text-sm leading-snug">${escapeHtml(j.mapel)}</h4>
+                                <p class="text-[11px] text-indigo-300 font-medium"><i class="fa-solid fa-user text-xs"></i> ${escapeHtml(j.nama_guru)}</p>
+                                <p class="text-[11px] text-slate-400 line-clamp-2">${escapeHtml(j.materi)}</p>
                             </div>
-                            <h4 class="font-bold text-white text-xs sm:text-sm leading-snug">${j.mapel}</h4>
-                            <p class="text-[11px] text-indigo-300 font-medium"><i class="fa-solid fa-user text-xs"></i> ${j.nama_guru}</p>
-                            <p class="text-[11px] text-slate-400 line-clamp-2">${j.materi}</p>
+                            <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] font-medium">
+                                <span class="text-slate-500 font-mono">${escapeHtml(j.created_at ? j.created_at.split(' ')[0] : '')}</span>
+                                ${j.foto_url ? `<a href="${escapeHtml(j.foto_url)}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline flex items-center gap-1 font-bold"><i class="fa-solid fa-image"></i> Foto KBM</a>` : '<span class="text-slate-500">Tanpa Foto</span>'}
+                            </div>
                         </div>
-                        <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] font-medium">
-                            <span class="text-slate-500 font-mono">${j.created_at ? j.created_at.split(' ')[0] : ''}</span>
-                            ${j.foto_url ? `<a href="${j.foto_url}" target="_blank" class="text-emerald-400 hover:underline flex items-center gap-1 font-bold"><i class="fa-solid fa-image"></i> Foto KBM</a>` : '<span class="text-slate-500">Tanpa Foto</span>'}
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } catch (err) {
-                container.innerHTML = `<p class="col-span-full text-center text-rose-400 font-bold py-8">Error: ${err.message}</p>`;
+                container.innerHTML = `<p class="col-span-full text-center text-rose-400 font-bold py-8">Error: ${escapeHtml(err.message)}</p>`;
             }
         }
 
@@ -628,9 +830,9 @@
             if (!currentUserSession) return;
             const namaGuru = document.getElementById('namaGuru').value || currentUserSession.nama || currentUserSession.username;
             document.getElementById('pdfNamaGuru').value = namaGuru;
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('pdfTglMulai').value = today;
-            document.getElementById('pdfTglSelesai').value = today;
+            const todayWib = getTanggalWIB();
+            document.getElementById('pdfTglMulai').value = todayWib;
+            document.getElementById('pdfTglSelesai').value = todayWib;
             document.getElementById('modalRekapPdf').classList.remove('hidden');
         }
 
@@ -641,32 +843,63 @@
             const tglMulai = document.getElementById('pdfTglMulai').value;
             const tglSelesai = document.getElementById('pdfTglSelesai').value;
             const tbody = document.getElementById('tabelRekapPdfBody');
-            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">Memuat rekap KBM...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">Memuat rekap KBM...</td></tr>';
+
             try {
-                const sql = `SELECT * FROM jurnal_kbm WHERE (nama_guru = ? OR username_guru = ?) AND date(created_at) >= ? AND date(created_at) <= ? ORDER BY created_at ASC`;
-                const records = await queryTurso(sql, [namaGuru, currentUserSession.username, tglMulai, tglSelesai]);
+                // Gunakan SUBSTRING(created_at, 1, 10) agar kompatibel penuh dengan PostgreSQL (Supabase) & SQLite
+                const sql = `SELECT * FROM jurnal_kbm
+                             WHERE (LOWER(TRIM(nama_guru)) = LOWER(?) OR LOWER(TRIM(username_guru)) = LOWER(?))
+                               AND SUBSTRING(created_at, 1, 10) >= ?
+                               AND SUBSTRING(created_at, 1, 10) <= ?
+                             ORDER BY created_at ASC`;
+                const records = await queryTurso(sql, [namaGuru.trim(), currentUserSession.username.trim(), tglMulai, tglSelesai]);
+
                 document.getElementById('pdfInfoGuru').innerText = `Nama Guru: ${namaGuru} | Periode: ${tglMulai} s.d ${tglSelesai}`;
-                document.getElementById('pdfPrintDate').innerText = new Date().toLocaleString('id-ID');
+                document.getElementById('pdfPrintDate').innerText = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
                 document.getElementById('pdfTtdNama').innerText = namaGuru;
+
                 if (!records || records.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400 font-bold">Tidak ditemukan riwayat KBM pada periode tanggal ini.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">Tidak ditemukan riwayat KBM pada periode tanggal ini.</td></tr>';
                     document.getElementById('btnCetakAksi').disabled = true;
                     document.getElementById('areaCetakPdf').classList.remove('hidden');
                     return;
                 }
-                tbody.innerHTML = records.map((r, idx) => `
-                    <tr>
-                        <td class="border border-slate-300 p-2 text-center font-bold">${idx + 1}</td>
-                        <td class="border border-slate-300 p-2"><span class="block font-bold">${r.created_at ? r.created_at.split(' ')[0] : ''}</span><span class="block text-[10px] text-slate-500 font-medium">Jam ${r.jam_ke}</span></td>
-                        <td class="border border-slate-300 p-2"><span class="block font-bold text-slate-900">${r.kelas}</span><span class="block text-[10px] text-slate-600 font-medium">${r.mapel}</span></td>
-                        <td class="border border-slate-300 p-2 text-[11px]">${r.materi}</td>
-                        <td class="border border-slate-300 p-2 text-[10px] font-bold text-rose-700">${r.absensi || 'Nihil'}</td>
-                    </tr>
-                `).join('');
+
+                tbody.innerHTML = records.map((r, idx) => {
+                    const jamArr = String(r.jam_ke || '').split(',').map(s => Number(s.trim())).filter(Boolean);
+                    const infoWaktu = formatRentangJam(jamArr);
+                    const thumbUrl = toPrintableDriveImageUrl(r.foto_url);
+                    const fotoCellHtml = thumbUrl
+                        ? `<a href="${escapeHtml(r.foto_url)}" target="_blank" rel="noopener noreferrer">
+                             <img src="${escapeHtml(thumbUrl)}" alt="Bukti KBM" crossorigin="anonymous"
+                                  onerror="this.style.display='none';this.nextElementSibling.style.display='inline';"
+                                  class="w-20 h-16 object-cover rounded border border-slate-300 mx-auto">
+                             <span style="display:none;" class="text-[9px] text-blue-700 underline">Lihat Foto</span>
+                           </a>`
+                        : '<span class="text-[10px] text-slate-400 italic">Tidak ada</span>';
+
+                    return `
+                        <tr>
+                            <td class="border border-slate-400 p-2 text-center font-bold">${idx + 1}</td>
+                            <td class="border border-slate-400 p-2">
+                                <span class="block font-bold">${escapeHtml(r.created_at ? r.created_at.split(' ')[0] : '')}</span>
+                                <span class="block text-[10px] text-slate-600 font-medium">${escapeHtml(infoWaktu)}</span>
+                            </td>
+                            <td class="border border-slate-400 p-2">
+                                <span class="block font-bold text-slate-900">${escapeHtml(r.kelas)}</span>
+                                <span class="block text-[10px] text-slate-700 font-medium">${escapeHtml(r.mapel)}</span>
+                            </td>
+                            <td class="border border-slate-400 p-2 text-[11px]">${escapeHtml(r.materi)}</td>
+                            <td class="border border-slate-400 p-2 text-[10px] font-bold text-rose-700">${escapeHtml(r.absensi || 'Nihil')}</td>
+                            <td class="border border-slate-400 p-1.5 text-center">${fotoCellHtml}</td>
+                        </tr>
+                    `;
+                }).join('');
+
                 document.getElementById('btnCetakAksi').disabled = false;
                 document.getElementById('areaCetakPdf').classList.remove('hidden');
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-500 font-bold">Error: ${err.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-rose-500 font-bold">Error: ${escapeHtml(err.message)}</td></tr>`;
             }
         }
     </script>
