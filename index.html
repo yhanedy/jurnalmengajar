@@ -9,8 +9,8 @@
 </head>
 <body class="bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 min-h-screen flex items-center justify-center p-4 font-sans text-slate-800">
     <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center space-y-5 border-4 border-yellow-400">
-        <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n" 
-             onError="this.onerror=null;this.src='https://placehold.co/100x100/003366/ffffff?text=SMADA'" 
+        <img src="https://lh3.googleusercontent.com/d/1YQYf0kgtLInAzpSJKJ_3Da86dIoVXU6n"
+             onError="this.onerror=null;this.src='https://placehold.co/100x100/003366/ffffff?text=SMADA'"
              class="w-16 h-16 mx-auto object-contain drop-shadow" alt="Logo Sekolah">
         <div>
             <h1 class="text-lg font-black text-slate-900 tracking-wide">SMAN 2 KARANGANYAR</h1>
@@ -46,22 +46,24 @@
             if (ssoToken) {
                 try {
                     const decodedData = JSON.parse(atob(decodeURIComponent(ssoToken)));
-                    if (decodedData.t && (Date.now() - decodedData.t > 60000)) throw new Error("Token SSO telah kadaluwarsa.");
+                    if (decodedData.t && (Date.now() - decodedData.t > 120000)) throw new Error("Token SSO telah kadaluwarsa.");
                     const userObj = {
                         username: decodedData.u || decodedData.username,
                         nama: decodedData.n || decodedData.nama,
                         role: decodedData.r || decodedData.role,
-                        token: decodedData.token || '' // <-- SIMPAN TOKEN
+                        token: decodedData.token || ''
                     };
                     localStorage.setItem('smada_user', JSON.stringify(userObj));
+                    if (userObj.token) localStorage.setItem('smada_token', userObj.token);
                     window.history.replaceState({}, document.title, window.location.pathname);
                     statusIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
                     statusMessage.innerText = `Otentikasi Berhasil! Selamat Datang, ${userObj.nama || userObj.username}`;
-                    setTimeout(() => { arahkanKeTujuan(userObj); }, 400);
+                    setTimeout(() => { arahkanKeTujuan(userObj); }, 350);
                     return;
                 } catch (e) {
                     console.warn("Token SSO tidak valid/kadaluwarsa:", e.message);
                     localStorage.removeItem('smada_user');
+                    localStorage.removeItem('smada_token');
                 }
             }
 
@@ -72,7 +74,7 @@
                     if (user && user.username) {
                         statusIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i>`;
                         statusMessage.innerText = `Memuat Sesi: ${user.nama || user.username}...`;
-                        setTimeout(() => { arahkanKeTujuan(user); }, 400);
+                        setTimeout(() => { arahkanKeTujuan(user); }, 350);
                         return;
                     }
                 } catch (e) { localStorage.removeItem('smada_user'); }
@@ -81,7 +83,7 @@
             statusIcon.innerHTML = `<i class="fa-solid fa-lock text-amber-500"></i>`;
             statusMessage.innerText = "Akses Terbatas! Mengalihkan ke Portal SSO Presensi...";
             actionArea.classList.remove('hidden');
-            setTimeout(() => { window.location.replace(PORTAL_SSO_URL); }, 1200);
+            setTimeout(() => { window.location.replace(PORTAL_SSO_URL); }, 1000);
         }
 
         function arahkanKeTujuan(user) {
