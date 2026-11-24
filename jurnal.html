@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/security-guard.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="js/config.js?v=jurnal_v11"></script>
+    <script src="js/config.js?v=jurnal_v12"></script>
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
@@ -157,7 +157,10 @@
                             </select>
                         </div>
                         <div class="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
-                            <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Pilihan Kelas</label>
+                            <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                                <span>Pilihan Kelas</span>
+                                <button type="button" onclick="muatDaftarKelasTurso()" class="text-[10px] text-indigo-400 hover:underline cursor-pointer"><i class="fa-solid fa-rotate"></i> Muat Ulang</button>
+                            </label>
                             <select id="pilihanKelas" onchange="loadSiswaByKelasTurso()" required class="w-full px-3.5 py-2.5 border border-slate-700 rounded-xl font-bold text-white text-xs sm:text-sm bg-slate-950 outline-none focus:border-indigo-500 transition">
                                 <option value="">-- MEMUAT KELAS... --</option>
                             </select>
@@ -182,11 +185,11 @@
                         <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-2.5">
                             <div>
                                 <h3 class="font-bold text-xs sm:text-sm text-slate-200">Presensi & Siswa Tidak Hadir</h3>
-                                <p class="text-[10px] text-slate-400">Pilih S (Sakit), I (Izin), A (Alpha).</p>
+                                <p class="text-[10px] text-slate-400">Pilih <b class="text-amber-400">S</b> (Sakit), <b class="text-indigo-400">I</b> (Izin), <b class="text-rose-400">A</b> (Alpha), atau <b class="text-emerald-400">D</b> (Dispensasi).</p>
                             </div>
                             <span id="presensiCount" class="text-[11px] bg-rose-500/10 text-rose-400 font-bold px-3 py-1 rounded-full border border-rose-500/20">0 Siswa Tidak Hadir</span>
                         </div>
-                        <div id="siswaListContainer" class="max-h-56 overflow-y-auto pr-1 divide-y divide-slate-800/60">
+                        <div id="siswaListContainer" class="max-h-72 overflow-y-auto pr-1 divide-y divide-slate-800/60">
                             <p class="text-xs font-medium text-slate-500 italic py-4 text-center">Silakan pilih Kelas terlebih dahulu.</p>
                         </div>
                     </div>
@@ -305,6 +308,7 @@
         let userLat = null, userLng = null, isLocationValid = false;
         let selectedJamList = [], fotoBase64Data = null;
         let masterJamPelajaran = {};
+        let cacheSemuaSiswa = [];
 
         window.onload = async function() {
             const todayWib = getTanggalWIB();
@@ -467,7 +471,7 @@
         }
 
         // =====================================================================
-        // IDENTITAS GURU, MAPEL & SISWA
+        // IDENTITAS GURU, MAPEL, KELAS & LIST SISWA (S / I / A / D)
         // =====================================================================
         function logoutJurnal() {
             localStorage.removeItem('smada_user');
@@ -539,12 +543,22 @@
             if (!selectKelas) return;
             selectKelas.innerHTML = '<option value="">-- MEMUAT KELAS... --</option>';
             try {
-                const dataKelas = await queryTurso("SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND TRIM(kelas) != '' ORDER BY kelas ASC", []);
-                const unikKelas = [...new Set((dataKelas || []).map(item => normalizeKelas(item.kelas)).filter(Boolean))]
+                // Ambil seluruh data siswa sekali agar daftar kelas & siswa langsung siap dan bebas masalah dialek SQL
+                const rows = await queryTurso("SELECT nisn, nama, kelas FROM siswa ORDER BY kelas ASC, nama ASC", []);
+                cacheSemuaSiswa = Array.isArray(rows) ? rows : [];
+
+                let unikKelas = [...new Set(cacheSemuaSiswa.map(item => normalizeKelas(item.kelas)).filter(Boolean))]
                     .sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
 
+                // Fallback jika kueri di atas kosong, coba SELECT DISTINCT kelas
+                if (unikKelas.length === 0) {
+                    const kelasOnly = await queryTurso("SELECT DISTINCT kelas FROM siswa ORDER BY kelas ASC", []);
+                    unikKelas = [...new Set((kelasOnly || []).map(item => normalizeKelas(item.kelas)).filter(Boolean))]
+                        .sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+                }
+
                 if (unikKelas.length > 0) {
-                    selectKelas.innerHTML = '<option value="">-- PILIH KELAS --</option>' +
+                    selectKelas.innerHTML = '<option value="">-- PILIH KELAS (' + unikKelas.length + ' KELAS) --</option>' +
                         unikKelas.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
                 } else {
                     selectKelas.innerHTML = '<option value="">-- KELAS KOSONG DI DATABASE --</option>';
@@ -561,26 +575,42 @@
             container.innerHTML = '';
             if (!kelasVal) {
                 container.innerHTML = '<p class="text-xs font-medium text-slate-500 italic py-4 text-center">Silakan pilih Kelas terlebih dahulu.</p>';
+                updatePresensiCount();
                 return;
             }
+
             container.innerHTML = '<p class="text-xs font-medium text-indigo-400 italic py-4 text-center"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Memuat data siswa...</p>';
             try {
-                const dataSiswa = await queryTurso("SELECT nisn, nama, kelas FROM siswa WHERE LOWER(TRIM(kelas)) = LOWER(?) ORDER BY nama ASC", [kelasVal]);
-                if (!dataSiswa || dataSiswa.length === 0) {
+                let dataSiswa = cacheSemuaSiswa.filter(
+                    s => normalizeKelas(s.kelas).toUpperCase() === kelasVal.toUpperCase()
+                );
+
+                // Jika cache kosong, ambil langsung dari database
+                if (dataSiswa.length === 0) {
+                    const rows = await queryTurso("SELECT nisn, nama, kelas FROM siswa WHERE kelas = ? ORDER BY nama ASC", [kelasVal]);
+                    dataSiswa = Array.isArray(rows) ? rows : [];
+                }
+
+                dataSiswa.sort((a, b) => String(a.nama || '').localeCompare(String(b.nama || ''), 'id'));
+
+                if (dataSiswa.length === 0) {
                     container.innerHTML = `<p class="text-xs font-medium text-slate-400 italic py-4 text-center">Tidak ada data siswa terdaftar untuk kelas "${escapeHtml(kelasVal)}".</p>`;
+                    updatePresensiCount();
                     return;
                 }
+
                 container.innerHTML = '';
                 dataSiswa.forEach((s, idx) => {
                     const row = document.createElement('div');
-                    row.className = 'flex items-center justify-between py-2.5 text-xs font-semibold border-b border-slate-800/60';
+                    row.className = 'siswa-presensi-row flex flex-wrap items-center justify-between gap-2 py-2.5 text-xs font-semibold border-b border-slate-800/60';
                     row.innerHTML = `
-                        <span class="text-slate-200">${idx + 1}. ${escapeHtml(s.nama)} <span class="text-slate-500 font-mono text-[11px]">(${escapeHtml(s.nisn || '-')})</span></span>
-                        <div class="flex items-center gap-3">
-                            <label class="cursor-pointer font-bold text-amber-400"><input type="radio" name="ket_${idx}" value="S" onchange="updatePresensiCount()" class="mr-1">S</label>
-                            <label class="cursor-pointer font-bold text-indigo-400"><input type="radio" name="ket_${idx}" value="I" onchange="updatePresensiCount()" class="mr-1">I</label>
-                            <label class="cursor-pointer font-bold text-rose-400"><input type="radio" name="ket_${idx}" value="A" onchange="updatePresensiCount()" class="mr-1">A</label>
-                            <button type="button" onclick="clearRadio('ket_${idx}')" class="text-slate-500 hover:text-slate-300 ml-1 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                        <span class="siswa-nama-label text-slate-200">${idx + 1}. ${escapeHtml(s.nama)} <span class="text-slate-500 font-mono text-[11px]">(${escapeHtml(s.nisn || '-')})</span></span>
+                        <div class="flex items-center gap-2.5 sm:gap-3">
+                            <label class="cursor-pointer font-bold text-amber-400 flex items-center gap-1"><input type="radio" name="ket_${idx}" value="S" onchange="updatePresensiCount()">S</label>
+                            <label class="cursor-pointer font-bold text-indigo-400 flex items-center gap-1"><input type="radio" name="ket_${idx}" value="I" onchange="updatePresensiCount()">I</label>
+                            <label class="cursor-pointer font-bold text-rose-400 flex items-center gap-1"><input type="radio" name="ket_${idx}" value="A" onchange="updatePresensiCount()">A</label>
+                            <label class="cursor-pointer font-bold text-emerald-400 flex items-center gap-1"><input type="radio" name="ket_${idx}" value="D" onchange="updatePresensiCount()">D</label>
+                            <button type="button" title="Reset Hadir" onclick="clearRadio('ket_${idx}')" class="text-slate-500 hover:text-slate-300 ml-1 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
                         </div>
                     `;
                     container.appendChild(row);
@@ -756,6 +786,8 @@
                 fotoBase64Data = null;
                 initJamGrid();
                 document.getElementById('imagePreviewContainer').classList.add('hidden');
+                document.getElementById('siswaListContainer').innerHTML = '<p class="text-xs font-medium text-slate-500 italic py-4 text-center">Silakan pilih Kelas terlebih dahulu.</p>';
+                updatePresensiCount();
                 initIdentitasGuru();
                 switchTab('liveFeedTab');
             } catch (err) {
@@ -769,9 +801,9 @@
         function getAbsensiData() {
             const results = [];
             const container = document.getElementById('siswaListContainer');
-            const rows = container.querySelectorAll('.flex.items-center.justify-between');
+            const rows = container.querySelectorAll('.siswa-presensi-row');
             rows.forEach(row => {
-                const nama = row.querySelector('span').innerText;
+                const nama = row.querySelector('.siswa-nama-label').innerText;
                 const checkedRadio = row.querySelector('input[type="radio"]:checked');
                 if (checkedRadio) results.push(`${nama} (${checkedRadio.value})`);
             });
@@ -846,7 +878,6 @@
             tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400 font-bold">Memuat rekap KBM...</td></tr>';
 
             try {
-                // Gunakan SUBSTRING(created_at, 1, 10) agar kompatibel penuh dengan PostgreSQL (Supabase) & SQLite
                 const sql = `SELECT * FROM jurnal_kbm
                              WHERE (LOWER(TRIM(nama_guru)) = LOWER(?) OR LOWER(TRIM(username_guru)) = LOWER(?))
                                AND SUBSTRING(created_at, 1, 10) >= ?
